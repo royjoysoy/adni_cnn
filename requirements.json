@@ -1,0 +1,14 @@
+{
+    "python": ">=3.7",
+    "packages": [
+      "pytorch",
+      "torchio",
+      "nibabel",
+      "scikit-image",
+      "pandas",
+      "numpy",
+      "matplotlib",
+      "seaborn",
+      "tqdm"
+    ]
+  }

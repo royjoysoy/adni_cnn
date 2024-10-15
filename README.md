@@ -21,17 +21,14 @@ The main components of this project include:
 5. Final model evaluation
 
 ## Prerequisites
+## Prerequisites
 
-- Python 3.7+
-- PyTorch
-- torchio
-- nibabel
-- scikit-image
-- pandas
-- numpy
-- matplotlib
-- seaborn
-- tqdm
+For a list of required packages and versions, please see the [requirements.json](requirements.json) file.
+
+To install the required packages, you can use the following command:
+
+```bash
+pip install -r <(python -c "import json; print('\n'.join([f'{p}' for p in json.load(open('requirements.json'))['packages']]))")
 
 ## Project Structure
 

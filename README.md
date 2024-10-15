@@ -3,9 +3,6 @@
 This project implements a 3D Convolutional Neural Network (CNN) with SimCLR (Simple Framework for Contrastive Learning of Visual Representations) for Alzheimer's disease classification using MRI images. The model is designed to classify brain scans into three categories: Alzheimer's Disease (AD), Mild Cognitive Impairment (MCI), and Healthy Control (HC).
 
 ## Datasets
-Our datasets are stored in Google Gloud Storage. Here are the links:
-- Raw data:
-- ## Datasets
 Our datasets are stored in Google Cloud Storage. Here are the links:
 - Raw data:
 - [Normalized data](https://storage.googleapis.com/colab-notebok-simclr/simclr/ADNI_Colab_uwdrive/)

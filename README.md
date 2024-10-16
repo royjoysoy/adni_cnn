@@ -30,6 +30,7 @@ To install the required packages, you can use the following command:
 ```bash
 pip install -r <(python -c "import json; print('\n'.join([f'{p}' for p in json.load(open('requirements.json'))['packages']]))")
 
+```
 ## Project Structure
 
 - `data_loading_RS_oct.py`: Contains functions for data loading and preprocessing

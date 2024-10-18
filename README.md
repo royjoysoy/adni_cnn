@@ -17,10 +17,34 @@ The main components of this project include:
 1. Data loading and preprocessing
 2. SimCLR model implementation
 3. Training with various data augmentation techniques
-4. Linear evaluation
-5. Final model evaluation
+   ![Data Augmentations](images/augmentations.png)
+   This image shows different data augmentation techniques applied to brain MRI scans:
+   - Base: Original unmodified images
+   - Flip: Vertical flipping of the images
+   - Anisotropy: Adjusting image resolution
+     
+   The full list of image augmentation methods includes:
+   
+   - Swap: Swapping certain parts of the image
+   - Flip: Vertical flipping of the images
+   - Anisotropy: Adjusting image resolution to simulate variations in scan quality
+   - Swap: Swapping certain parts of the image to encourage learning of more general features
+   - Elastic: Applying elastic deformations to simulate anatomical variability
+   - Bias Field: Adding simulated intensity inhomogeneities to mimic MRI artifacts
+   - Blur: Applying Gaussian blur to simulate motion or focus issues
+   - Gamma: Adjusting image brightness and contrast
+   - Spike: Adding spike noise to simulate scanner artifacts
+   - Ghost: Simulating ghosting artifacts often seen in MRI
+   - Noise: Adding random noise to the images
+   - Motion: Simulating patient movement during scanning
+   - Mixup: Blending two images together
+   - CutMix: Replacing rectangular regions between images
 
-## Prerequisites
+These augmentation techniques help increase the diversity of the training data, potentially improving the model's ability to generalize to unseen data and handle various real-world imaging conditions.
+
+5. Linear evaluation
+6. Final model evaluation
+
 ## Prerequisites
 
 For a list of required packages and versions, please see the [requirements.json](requirements.json) file.
@@ -29,7 +53,7 @@ To install the required packages, you can use the following command:
 
 ```bash
 pip install -r <(python -c "import json; print('\n'.join([f'{p}' for p in json.load(open('requirements.json'))['packages']]))")
-
+```
 ## Project Structure
 
 - `data_loading_RS_oct.py`: Contains functions for data loading and preprocessing

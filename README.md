@@ -1,4 +1,4 @@
-# Alzheimer's Disease Classification using SimCLR
+# Alzheimer's Disease Classification using SimCLR HELLO
 
 This project implements a 3D Convolutional Neural Network (CNN) with SimCLR (Simple Framework for Contrastive Learning of Visual Representations) for Alzheimer's disease classification using MRI images. The model is designed to classify brain scans into three categories: Alzheimer's Disease (AD), Mild Cognitive Impairment (MCI), and Healthy Control (HC).
 

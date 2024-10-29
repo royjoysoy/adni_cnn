@@ -20,7 +20,7 @@ from training_m3 import run_ablation_study, linear_eval, final_evaluation
 from utils_m3 import TrainingConfig, save_model, plot_learning_curves, get_hardware_info
 from training_m3 import linear_eval_all_augs 
 
-from fine_tuning_m3 import fine_tune, load_fine_tuned_model
+from fine_tunning_m3 import fine_tune, load_fine_tuned_model
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 

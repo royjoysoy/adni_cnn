@@ -58,11 +58,8 @@ class ADNI_3_Class(Dataset):
 # custom_std = 34.073
 
 def get_mr_transforms():
-    return {
-        'base': tio.Compose([
-            tio.ToCanonical()
-            #tio.RescaleIntensity(out_min_max=(0, 1)),
-        ]),
+    # First define the strong augmentations
+    mr_transforms = {
         'flip': tio.RandomFlip(axes=(0, 1, 2)),
         'anisotropy': tio.RandomAnisotropy(downsampling=(1, 2.5)),
         'swap': tio.RandomSwap(patch_size=15, num_iterations=100),
@@ -77,17 +74,84 @@ def get_mr_transforms():
         'mixup': tio.Compose([]),  # Placeholder for mixup
         'cutmix': tio.Compose([])  # Placeholder for cutmix
     }
+
+    # Then return complete dictionary with both base and strong augmentations
+    return {
+        'base': tio.Compose([
+            # Essential preprocessing
+            tio.ToCanonical(),            # Ensure canonical orientation
+            
+            # Standard augmentations for fine-tuning (following SimCLR paper's approach)
+            tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.5),  # Random flipping
+            tio.RandomAffine(
+                scales=(0.95, 1.05),      # Slight random scaling (5%)
+                degrees=10,                # Slight rotation (10 degrees)
+                translation=5,             # Small translations (5 voxels)
+                isotropic=True,            # Same transformation for all dimensions
+                p=0.5                      # 50% probability of applying
+            ),
+            tio.RescaleIntensity(
+                out_min_max=(0, 1),       # Normalize intensity to [0,1]
+                percentiles=(1, 99)        # Robust scaling using percentiles
+            ),
+            
+            # Optional: add slight noise to improve robustness
+            tio.RandomNoise(
+                mean=0,
+                std=0.01,                 # Very small noise
+                p=0.2                     # 20% probability
+            ),
+        ]),
+
+        'flip': mr_transforms['flip'],
+        'anisotropy': mr_transforms['anisotropy'],
+        'swap': mr_transforms['swap'],
+        'elastic': mr_transforms['elastic'],
+        'bias_field': mr_transforms['bias_field'],
+        'blur': mr_transforms['blur'],
+        'gamma': mr_transforms['gamma'],
+        'spike': mr_transforms['spike'],
+        'ghost': mr_transforms['ghost'],
+        'noise': mr_transforms['noise'],
+        'motion': mr_transforms['motion'],
+        'mixup': mr_transforms['mixup'],
+        'cutmix': mr_transforms['cutmix']
+    }
+
 def get_data_loaders(train_df, val_df, test_df, batch_size, transforms):
+    """
+    Create data loaders with proper augmentations.
+    Now includes properly configured base transformations for fine-tuning.
+    """
     train_loaders = {}
     for aug_type, transform in transforms.items():
         train_dataset = ADNI_3_Class(data_df=train_df, transform=transform, aug_type=aug_type)
-        train_loaders[aug_type] = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+        train_loaders[aug_type] = DataLoader(
+            train_dataset, 
+            batch_size=batch_size, 
+            shuffle=True, 
+            drop_last=True
+        )
 
-    # Use 'base' transform for validation and test datasets
-    val_dataset = ADNI_3_Class(data_df=val_df, transform=transforms['base'], aug_type='base')
+    # Use base transform for validation and test (no augmentation needed)
+    val_dataset = ADNI_3_Class(
+        data_df=val_df, 
+        transform=tio.Compose([
+            tio.ToCanonical(),
+            tio.RescaleIntensity(out_min_max=(0, 1), percentiles=(1, 99))
+        ]), 
+        aug_type='base'
+    )
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    test_dataset = ADNI_3_Class(data_df=test_df, transform=transforms['base'], aug_type='base')
+    test_dataset = ADNI_3_Class(
+        data_df=test_df, 
+        transform=tio.Compose([
+            tio.ToCanonical(),
+            tio.RescaleIntensity(out_min_max=(0, 1), percentiles=(1, 99))
+        ]), 
+        aug_type='base'
+    )
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loaders, val_loader, test_loader

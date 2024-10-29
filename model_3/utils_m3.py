@@ -10,6 +10,7 @@ import sys
 import numpy as np
 from datetime import datetime
 from torch.optim.lr_scheduler import _LRScheduler, CosineAnnealingLR
+
 class WarmupCosineScheduler(_LRScheduler):
     def __init__(self, optimizer, warmup_epochs, total_epochs, last_epoch=-1):
         self.warmup_epochs = warmup_epochs
@@ -62,6 +63,14 @@ class TrainingConfig:
         self.data_path = args.data_path
         self.save_dir = args.save_dir
 
+        # Fine-tuning parameters
+        self.ft_epochs = args.ft_epochs
+        self.ft_encoder_lr = args.ft_encoder_lr
+        self.ft_classifier_lr = args.ft_classifier_lr
+        self.ft_warmup_epochs = args.ft_warmup_epochs
+        self.ft_unfreeze_epoch = args.ft_unfreeze_epoch
+        self.ft_unfreeze_strategy = args.ft_unfreeze_strategy
+
     @classmethod
     def get_default_config(cls):
     # Default paths
@@ -108,6 +117,21 @@ class TrainingConfig:
                         help='A lower bound on the learning rate')
         parser.add_argument('--early_stopping_patience', default=2, type=int,
                         help='Patience for early stopping')
+        
+        # Fine-tuning parameters
+        parser.add_argument('--ft_epochs', default=50, type=int,
+                        help='Number of fine-tuning epochs')
+        parser.add_argument('--ft_encoder_lr', default=1e-4, type=float,
+                        help='Learning rate for fine-tuning encoder')
+        parser.add_argument('--ft_classifier_lr', default=1e-3, type=float,
+                        help='Learning rate for fine-tuning classifier')
+        parser.add_argument('--ft_warmup_epochs', default=5, type=int,
+                        help='Number of warmup epochs for fine-tuning')
+        parser.add_argument('--ft_unfreeze_epoch', default=5, type=int,
+                        help='Epoch to unfreeze encoder in gradual strategy')
+        parser.add_argument('--ft_unfreeze_strategy', default='gradual', type=str,
+                        choices=['all', 'gradual', 'last_n'],
+                        help='Strategy for unfreezing layers during fine-tuning') 
         
         # Other parameters
         parser.add_argument('--num_workers', default=2, type=int,

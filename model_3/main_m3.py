@@ -20,7 +20,8 @@ from training_m3 import run_ablation_study, linear_eval, final_evaluation
 from utils_m3 import TrainingConfig, save_model, plot_learning_curves, get_hardware_info
 from training_m3 import linear_eval_all_augs 
 
-# model 2 updates 4
+from fine_tuning_m3 import fine_tune, load_fine_tuned_model
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
@@ -196,20 +197,52 @@ def main():
 
     logging.info(f"\nBest performing augmentation: {best_aug_type} with accuracy: {best_aug_acc:.2f}%")
 
-    # Load the best model for final evaluation
-    best_model_path = os.path.join(config.save_dir, f'best_linear_eval_model_{best_aug_type}.pth')
-    if os.path.exists(best_model_path):
-        checkpoint = torch.load(best_model_path)
+    # Start fine-tuning phase
+    logging.info("\nStarting fine-tuning phase...")
+    # Load the best model from linear evaluation for fine-tuning
+    best_linear_model_path = os.path.join(config.save_dir, f'best_linear_eval_model_{best_aug_type}.pth')
+    if os.path.exists(best_linear_model_path):
+        checkpoint = torch.load(best_linear_model_path)
         net.load_state_dict(checkpoint['model_state_dict'])
-        logging.info(f"Loaded best model from {best_aug_type} augmentation for final evaluation")
+        logging.info(f"Loaded best linear evaluation model from {best_aug_type} augmentation for fine-tuning")
+    else:
+        logging.warning("No best linear evaluation model found. Using current model state for fine-tuning")
+
+    net = net.to(device)
     
-    # Final evaluation
-    logging.info("Starting final evaluation with best model")
+    # Make sure the classifier is added before fine-tuning
+    net.add_classifier()
+    
+    logging.info(f"Using '{config.ft_unfreeze_strategy}' unfreezing strategy for fine-tuning")
+    
+    fine_tuning_start_time = time.time()
+    best_ft_acc, best_ft_epoch = fine_tune(
+        net=net,
+        train_loader=train_loaders['base'],
+        val_loader=val_loader,
+        config=config,
+        writer=writer,
+        save_dir=config.save_dir,
+        unfreeze_strategy=config.ft_unfreeze_strategy
+    )
+    fine_tuning_time = time.time() - fine_tuning_start_time
+    
+    logging.info(f"\nFine-tuning completed:")
+    logging.info(f"Best validation accuracy: {best_ft_acc:.2f}%")
+    logging.info(f"Best epoch: {best_ft_epoch}")
+    logging.info(f"Fine-tuning time: {fine_tuning_time / 60:.2f} minutes")
+    
+    # Load the best fine-tuned model for final evaluation
+    net, _ = load_fine_tuned_model(net, os.path.join(config.save_dir, 'best_fine_tuned_model.pth'))
+    
+    # Final evaluation with the fine-tuned model
+    logging.info("\nStarting final evaluation with fine-tuned model...")
     final_report, final_accuracy = final_evaluation(net, test_loader, device, config.save_dir)
 
     # Print final results
     logging.info(f"Total SimCLR epochs: {simclr_epochs}")
     logging.info(f"Total Linear Evaluation epochs: {linear_eval_epochs}")
+    logging.info(f"Total Fine-tuning epochs: {config.ft_epochs}")
     logging.info("\nFinal Evaluation Results:")
     logging.info(f"Accuracy: {final_report['accuracy']:.4f}")
 
@@ -253,32 +286,34 @@ def main():
     print("\n--- Training Time Report ---")
     print(f"1) SimCLR Training Time: {total_simclr_time / 60:.2f} minutes")
     print(f"2) Linear Evaluation Time: {linear_eval_time / 60:.2f} minutes")
-    print(f"3) Total Training Time: {(total_simclr_time + linear_eval_time) / 60:.2f} minutes")
-    print("\n4) Data Augmentation Time by Type:")
+    print(f"3) Fine-tuning Time: {fine_tuning_time / 60:.2f} minutes")
+    print(f"4) Total Training Time: {(total_simclr_time + linear_eval_time + fine_tuning_time) / 60:.2f} minutes")
+    print("\n5) Data Augmentation Time by Type:")
     for aug_type, data in results.items():
         print(f"   {aug_type}: {data['aug_time'] / 60:.2f} minutes")
-    print(f"\n5) Hardware Used: {get_hardware_info()}")
-    print(f"6) Batch Size: SimCLR - {simclr_batch_size}, Linear Evaluation - {linear_eval_batch_size}")
-    print(f"7) Number of Epochs: SimCLR - {simclr_epochs}, Linear Evaluation - {linear_eval_epochs}")
-    print(f"8) Learning Rate: {config.lr}")
-    print(f"9) Optimizer: {type(optimizer).__name__}")
+    print(f"\n6) Hardware Used: {get_hardware_info()}")
+    print(f"7) Batch Size: SimCLR - {simclr_batch_size}, Linear Evaluation - {linear_eval_batch_size}, Fine-tuning - {simclr_batch_size}")
+    print(f"8) Number of Epochs: SimCLR - {simclr_epochs}, Linear Evaluation - {linear_eval_epochs}, Fine-tuning - {config.ft_epochs}")
+    print(f"9) Learning Rate: SimCLR - {config.lr}, Fine-tuning encoder - {config.ft_encoder_lr}, Fine-tuning classifier - {config.ft_classifier_lr}")
+    print(f"10) Optimizer: {type(optimizer).__name__}")
 
-    # Save the above information to a text file
+    # Save the training report
     with open(os.path.join(config.save_dir, f'training_report_{current_datetime}.txt'), 'w') as f:
         f.write("--- Training Time Report ---\n")
         f.write(f"1) SimCLR Training Time: {total_simclr_time / 60:.2f} minutes\n")
         f.write(f"2) Linear Evaluation Time: {linear_eval_time / 60:.2f} minutes\n")
-        f.write(f"3) Total Training Time: {(total_simclr_time + linear_eval_time) / 60:.2f} minutes\n")
-        f.write("\n4) Data Augmentation Time by Type:\n")
+        f.write(f"3) Fine-tuning Time: {fine_tuning_time / 60:.2f} minutes\n")
+        f.write(f"4) Total Training Time: {(total_simclr_time + linear_eval_time + fine_tuning_time) / 60:.2f} minutes\n")
+        f.write("\n5) Data Augmentation Time by Type:\n")
         for aug_type, data in results.items():
             f.write(f"   {aug_type}: {data['aug_time'] / 60:.2f} minutes\n")
-        f.write(f"\n5) Hardware Used: {get_hardware_info()}\n")
-        f.write(f"6) Batch Size: SimCLR - {simclr_batch_size}, Linear Evaluation - {linear_eval_batch_size}\n")
-        f.write(f"7) Number of Epochs: SimCLR - {simclr_epochs}, Linear Evaluation - {linear_eval_epochs}\n")
-        f.write(f"8) Learning Rate: {config.lr}\n")
-        f.write(f"9) Optimizer: {type(optimizer).__name__}\n")
+        f.write(f"\n6) Hardware Used: {get_hardware_info()}\n")
+        f.write(f"7) Batch Size: SimCLR - {simclr_batch_size}, Linear Evaluation - {linear_eval_batch_size}\n")
+        f.write(f"8) Number of Epochs: SimCLR - {simclr_epochs}, Linear Evaluation - {linear_eval_epochs}, Fine-tuning - {config.ft_epochs}\n")
+        f.write(f"9) Learning Rate: SimCLR - {config.lr}, Fine-tuning encoder - {config.ft_encoder_lr}, Fine-tuning classifier - {config.ft_classifier_lr}\n")
+        f.write(f"10) Optimizer: {type(optimizer).__name__}\n")
 
-    logging.info("Ablation study, model ranking, linear evaluation, and final evaluation completed.")
+    logging.info("Ablation study, model ranking, linear evaluation, fine-tuning, and final evaluation completed.")
     logging.info("SimCLR training process completed")
 
 if __name__ == '__main__':

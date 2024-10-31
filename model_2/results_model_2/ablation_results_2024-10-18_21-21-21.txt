@@ -1,0 +1,14 @@
+base: Avg Loss: 3.8383, Avg Val Accuracy: 33.84%
+flip: Avg Loss: 4.6392, Avg Val Accuracy: 33.74%
+anisotropy: Avg Loss: 3.9642, Avg Val Accuracy: 33.55%
+swap: Avg Loss: 5.0667, Avg Val Accuracy: 35.26%
+elastic: Avg Loss: 4.5756, Avg Val Accuracy: 35.94%
+bias_field: Avg Loss: 4.4929, Avg Val Accuracy: 34.29%
+blur: Avg Loss: 4.2319, Avg Val Accuracy: 35.39%
+gamma: Avg Loss: 3.9665, Avg Val Accuracy: 33.46%
+spike: Avg Loss: 3.9774, Avg Val Accuracy: 33.72%
+ghost: Avg Loss: 4.0038, Avg Val Accuracy: 33.65%
+noise: Avg Loss: 4.2202, Avg Val Accuracy: 33.86%
+motion: Avg Loss: 3.9747, Avg Val Accuracy: 32.36%
+mixup: Avg Loss: 5.0255, Avg Val Accuracy: 34.80%
+cutmix: Avg Loss: 4.8142, Avg Val Accuracy: 34.05%

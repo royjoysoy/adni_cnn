@@ -188,7 +188,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
     # Training parameters
-    num_epochs = 8
+    num_epochs = 15
     patience = 5
     train_losses = []
     val_losses = []

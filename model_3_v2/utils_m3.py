@@ -73,9 +73,9 @@ class TrainingConfig:
 
     @classmethod
     def get_default_config(cls):
-    # Default paths
+        # Default paths
         DEFAULT_DATA_PATH = '/home/simclr_project/simclr/SimCLR_RS/df_modified.csv'
-        DEFAULT_SAVE_DIR = '/home/simclr_project/simclr/SimCLR_RS/results'
+        DEFAULT_SAVE_DIR = '/home/simclr_project/simclr/SimCLR_RS/model_3_v2'
         
         parser = argparse.ArgumentParser(description='Train SimCLR')
         # SimCLR parameters
@@ -87,17 +87,17 @@ class TrainingConfig:
                         help='Number of neighbors for kNN classifier')
         parser.add_argument('--simclr_batch_size', default=2, type=int,
                         help='Batch size for SimCLR training')
-        parser.add_argument('--simclr_epochs', default=2, type=int,
+        parser.add_argument('--simclr_epochs', default=1, type=int,  # Changed from 2 to 1
                         help='Number of epochs to train for SimCLR')
-        parser.add_argument('--warmup_epochs', default=1, type=int,
+        parser.add_argument('--warmup_epochs', default=0, type=int,  # Changed from 1 to 0
                         help='Number of epochs for learning rate warm-up')
         
         # Linear evaluation parameters
         parser.add_argument('--linear_eval_batch_size', default=4, type=int,
                         help='Batch size for linear evaluation')
-        parser.add_argument('--linear_eval_epochs', default=2, type=int,
+        parser.add_argument('--linear_eval_epochs', default=1, type=int,  # Changed from 2 to 1
                         help='Number of epochs for linear evaluation')
-        parser.add_argument('--linear_eval_warmup_epochs', default=1, type=int,
+        parser.add_argument('--linear_eval_warmup_epochs', default=0, type=int,  # Changed from 1 to 0
                         help='Number of epochs for learning rate warm-up in linear evaluation')
         parser.add_argument('--linear_eval_lr', default=1e-5, type=float,
                         help='Initial learning rate for linear evaluation')
@@ -119,15 +119,15 @@ class TrainingConfig:
                         help='Patience for early stopping')
         
         # Fine-tuning parameters
-        parser.add_argument('--ft_epochs', default=50, type=int,
+        parser.add_argument('--ft_epochs', default=1, type=int,  # Changed from 50 to 1
                         help='Number of fine-tuning epochs')
         parser.add_argument('--ft_encoder_lr', default=1e-4, type=float,
                         help='Learning rate for fine-tuning encoder')
         parser.add_argument('--ft_classifier_lr', default=1e-3, type=float,
                         help='Learning rate for fine-tuning classifier')
-        parser.add_argument('--ft_warmup_epochs', default=5, type=int,
+        parser.add_argument('--ft_warmup_epochs', default=0, type=int,  # Changed from 5 to 0
                         help='Number of warmup epochs for fine-tuning')
-        parser.add_argument('--ft_unfreeze_epoch', default=5, type=int,
+        parser.add_argument('--ft_unfreeze_epoch', default=0, type=int,  # Changed from 5 to 0
                         help='Epoch to unfreeze encoder in gradual strategy')
         parser.add_argument('--ft_unfreeze_strategy', default='gradual', type=str,
                         choices=['all', 'gradual', 'last_n'],
@@ -140,7 +140,7 @@ class TrainingConfig:
                         help='Random seed for reproducibility')
         parser.add_argument('--log_interval', default=10, type=int,
                         help='How many batches to wait before logging training status')
-        parser.add_argument('--save_interval', default=5, type=int,
+        parser.add_argument('--save_interval', default=1, type=int,  # Changed from 5 to 1
                         help='How many epochs to wait before saving a model checkpoint')
         parser.add_argument('--data_path', default=DEFAULT_DATA_PATH, type=str,
                         help='Path to the data CSV file')

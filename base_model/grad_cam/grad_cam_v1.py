@@ -56,7 +56,7 @@ class CustomImageDataset(Dataset):
         
         img = nib.load(img_path).get_fdata()
         img = skTrans.resize(img, (64, 64, 64), order=1, preserve_range=True)
-        img = (img - img.min()) / (img.max() - img.min())
+        img = (img - img.mean()) / img.std()
         img = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
         
         return img, label
@@ -193,8 +193,13 @@ class GradCAM:
             input_image.requires_grad = original_requires_grad
 
 def save_gradcam_visualization(model, image, label, save_path):
-    """GradCAM visualization with error handling"""
     try:
+        # Load MNI template (you would need to specify the correct path)
+        template = nib.load('path_to_your_mni152_template.nii.gz').get_fdata()
+        template = skTrans.resize(template, (64, 64, 64), order=1, preserve_range=True)
+        # Z-score normalize template
+        template = (template - template.mean()) / template.std()
+        
         gradcam = GradCAM(model)
         cam = gradcam.generate_cam(image.unsqueeze(0).to(device))
         
@@ -202,28 +207,46 @@ def save_gradcam_visualization(model, image, label, save_path):
             logging.warning(f"Failed to generate GradCAM for {save_path}")
             return
         
-        # Get central slice
-        original_slice = image[0, :, :, cam.shape[2]//2].cpu().numpy()
-        cam_slice = cam[:, :, cam.shape[2]//2]
+        # Convert image to numpy and Z-score normalize for visualization
+        image_np = image[0].cpu().numpy()
+        image_np = (image_np - image_np.mean()) / image_np.std()
         
-        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+        # Create figure with four columns: Original, Template, GradCAM, Overlay
+        fig, axes = plt.subplots(3, 4, figsize=(20, 15))
         
-        # Original image
-        ax1.imshow(original_slice, cmap='gray')
-        ax1.set_title('Original Image')
-        ax1.axis('off')
+        views = ['Sagittal', 'Coronal', 'Axial']
+        slices = [
+            (lambda x: x[:, :, x.shape[2]//2],  # Sagittal
+             lambda x: x[:, x.shape[1]//2, :],  # Coronal
+             lambda x: x[x.shape[0]//2, :, :])  # Axial
+        ]
         
-        # GradCAM
-        ax2.imshow(cam_slice, cmap='jet')
-        ax2.set_title('GradCAM')
-        ax2.axis('off')
-        
-        # Overlay
-        ax3.imshow(original_slice, cmap='gray')
-        ax3.imshow(cam_slice, cmap='jet', alpha=0.5)
-        ax3.set_title('Overlay')
-        ax3.axis('off')
-        
+        for i, (view, slice_fn) in enumerate(zip(views, slices)):
+            # Original patient MRI
+            patient_slice = slice_fn(image_np)  # Using normalized image
+            axes[i,0].imshow(patient_slice, cmap='gray', vmin=-3, vmax=3)  # Limit contrast to ±3 standard deviations
+            axes[i,0].set_title(f'{view} - Patient MRI')
+            axes[i,0].axis('off')
+            
+            # Template
+            template_slice = slice_fn(template)
+            axes[i,1].imshow(template_slice, cmap='gray', vmin=-3, vmax=3)
+            axes[i,1].set_title(f'{view} - MNI Template')
+            axes[i,1].axis('off')
+            
+            # GradCAM
+            cam_slice = slice_fn(cam)
+            axes[i,2].imshow(cam_slice, cmap='jet')
+            axes[i,2].set_title(f'{view} - GradCAM')
+            axes[i,2].axis('off')
+            
+            # Overlay on patient MRI
+            axes[i,3].imshow(patient_slice, cmap='gray', vmin=-3, vmax=3)
+            axes[i,3].imshow(cam_slice, cmap='jet', alpha=0.6)
+            axes[i,3].set_title(f'{view} - Overlay')
+            axes[i,3].axis('off')
+            
+        plt.suptitle(f'GradCAM Visualization with MNI Template Reference - Class {label.argmax().item()}')
         plt.tight_layout()
         plt.savefig(save_path)
         plt.close()
@@ -280,8 +303,9 @@ def validate(dataloader, model, criterion, device, epoch):
 def kms_train_loop(model, train_loader, optimizer, loss_fn, device):
     """KMS training loop function"""
     model.train()
-    train_loss = []
-    train_acc = []
+    total_loss = 0
+    total_correct = 0
+    total_samples = 0
     
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -294,16 +318,22 @@ def kms_train_loop(model, train_loader, optimizer, loss_fn, device):
         pred = output.argmax(dim=1, keepdim=True)
         target_idx = target.argmax(dim=1, keepdim=True)
         correct = pred.eq(target_idx).sum().item()
-        acc = correct / len(data)
         
-        train_loss.append(loss.item())
-        train_acc.append(acc)
+        # Accumulate metrics
+        total_loss += loss.item()
+        total_correct += correct
+        total_samples += len(data)
         
         if batch_idx % 10 == 0:
+            batch_acc = (correct / len(data)) * 100
             log_info(f'Train Batch [{batch_idx}/{len(train_loader)}] '
-                    f'Loss: {loss.item():.6f} Acc: {acc:.4f}')
+                    f'Loss: {loss.item():.6f} Acc: {batch_acc:.2f}%')
     
-    return np.mean(train_loss), np.mean(train_acc)
+    # Calculate final metrics
+    avg_loss = total_loss / len(train_loader)
+    avg_acc = (total_correct / total_samples) * 100
+    
+    return avg_loss, avg_acc
 
 def main():
     # Load and prepare data
@@ -379,7 +409,9 @@ def main():
                     try:
                         cm = confusion_matrix(labels, preds)
                         plt.figure(figsize=(8, 6))
-                        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+                        # Add these parameters to sns.heatmap
+                        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                                    yticklabels=sorted(range(3), reverse=True))  # This will reverse the y-axis labels
                         plt.title(f'Confusion Matrix - Epoch {epoch+1}')
                         plt.ylabel('True Label')
                         plt.xlabel('Predicted Label')

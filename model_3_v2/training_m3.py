@@ -376,24 +376,24 @@ def linear_eval_all_augs(net: torch.nn.Module,
                            desc=f'[{aug_type}] Linear Eval Train Epoch {linear_eval_epoch+1}/{config.linear_eval_epochs}')
             
             for data in train_bar:
-                # Handle different data formats based on augmentation type
-                if aug_type in ['mixup', 'cutmix']:
-                    pos_1, pos_2, target, _ = data  # Ignore the idx
-                elif len(data) == 3:  # If data contains (pos_1, pos_2, target)
-                    pos_1, _, target = data  # Only use pos_1 for linear evaluation
-                elif len(data) == 2:  # If data contains (input, target)
-                    pos_1, target = data
+                # Handle different data formats
+                if isinstance(data, (list, tuple)):
+                    if len(data) == 4:  # mixup/cutmix format: (pos_1, pos_2, target, idx)
+                        pos_1, _, target, _ = data
+                    elif len(data) == 3:  # standard format: (pos_1, pos_2, target)
+                        pos_1, _, target = data
+                    elif len(data) == 2:  # basic format: (input, target)
+                        pos_1, target = data
+                    else:
+                        raise ValueError(f"Unexpected data format with {len(data)} elements")
                 else:
-                    raise ValueError(f"Unexpected data format with {len(data)} elements")
+                    raise ValueError(f"Data should be a tuple or list, got {type(data)}")
                 
                 pos_1, target = pos_1.to(device), target.to(device)
                 
                 with torch.no_grad():
                     features = net.get_features(pos_1)
                 outputs = net.classifier(features)
-                
-                # For mixup/cutmix, we don't need to handle the interpolated labels 
-                # during linear evaluation, just use the original labels
                 loss = criterion(outputs, target)
                 
                 optimizer.zero_grad()
@@ -423,17 +423,23 @@ def linear_eval_all_augs(net: torch.nn.Module,
             with torch.no_grad():
                 for data in val_bar:
                     # Handle different data formats for validation
-                    if len(data) == 3:  # If data contains (pos_1, pos_2, target)
-                        pos_1, _, target = data
-                    elif len(data) == 2:  # If data contains (input, target)
-                        pos_1, target = data
+                    if isinstance(data, (list, tuple)):
+                        if len(data) == 4:  # mixup/cutmix format
+                            pos_1, _, target, _ = data
+                        elif len(data) == 3:  # standard format
+                            pos_1, _, target = data
+                        elif len(data) == 2:  # basic format
+                            pos_1, target = data
+                        else:
+                            raise ValueError(f"Unexpected validation data format with {len(data)} elements")
                     else:
-                        raise ValueError(f"Unexpected validation data format with {len(data)} elements")
+                        raise ValueError(f"Validation data should be a tuple or list, got {type(data)}")
                     
                     pos_1, target = pos_1.to(device), target.to(device)
                     features = net.get_features(pos_1)
                     outputs = net.classifier(features)
                     loss = criterion(outputs, target)
+                    
                     val_loss += loss.item()
                     _, predicted = outputs.max(1)
                     total += target.size(0)

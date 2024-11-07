@@ -1,0 +1,25 @@
+Classification Report:
+CN:
+  Precision: 0.4444
+  Recall: 0.1644
+  F1-score: 0.2400
+  F3-score: 0.1754
+  F5-score: 0.1685
+  Support: 146.0
+MCI:
+  Precision: 0.3473
+  Recall: 0.8529
+  F1-score: 0.4936
+  F3-score: 0.7445
+  F5-score: 0.8077
+  Support: 136.0
+Dementia:
+  Precision: 0.0000
+  Recall: 0.0000
+  F1-score: 0.0000
+  F3-score: 0.0000
+  F5-score: 0.0000
+  Support: 107.0
+Accuracy: 0.3265
+Macro Avg F1-score: 0.2445
+Weighted Avg F1-score: 0.2627

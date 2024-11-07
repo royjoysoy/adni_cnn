@@ -1,0 +1,1 @@
+/home/simclr_project/simclr/SimCLR_RS/results_model_m3_v3/latest_model_2024-11-07_20-00-33.pth

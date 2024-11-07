@@ -1,0 +1,27 @@
+--- Training Time Report ---
+1) SimCLR Training Time: 65.67 minutes
+2) Linear Evaluation Time: 36.29 minutes
+3) Fine-tuning Time: 5.07 minutes
+4) Total Training Time: 107.04 minutes
+
+5) Data Augmentation Time by Type:
+   base: 5.36 minutes
+   flip: 4.88 minutes
+   anisotropy: 5.42 minutes
+   swap: 5.40 minutes
+   elastic: 4.67 minutes
+   bias_field: 5.03 minutes
+   blur: 5.31 minutes
+   gamma: 3.90 minutes
+   spike: 3.97 minutes
+   ghost: 5.02 minutes
+   noise: 3.98 minutes
+   motion: 5.21 minutes
+   mixup: 3.76 minutes
+   cutmix: 3.76 minutes
+
+6) Hardware Used: GPU: NVIDIA A100-PCIE-40GB, 40960.0MB, CPU: 32 cores, 64 threads, RAM: 251.55 GB
+7) Batch Size: SimCLR - 2, Linear Evaluation - 4
+8) Number of Epochs: SimCLR - 1, Linear Evaluation - 1, Fine-tuning - 1
+9) Learning Rate: SimCLR - 1e-05, Fine-tuning encoder - 0.0001, Fine-tuning classifier - 0.001
+10) Optimizer: AdamW

@@ -1,0 +1,34 @@
+#!/bin/bash
+###$1 is subject directory
+###$2 is subject name
+
+#export freesurfer path
+export FREESURFER_HOME=/usr/local/freesurfer/stable7
+source /usr/local/freesurfer/stable7/SetUpFreeSurfer.sh
+export RECON_ALL=/usr/local/freesurfer/stable7/bin/recon-all
+
+cd $1
+echo $1
+
+t1_file=$1/$2
+
+file_name=$2
+subj_name=${file_name%.nii}
+
+#t1_file =`ls $1/ses-initial/anat/$2_ses-initial_run-1_T1w.nii.gz`
+
+outdir=$2
+echo ${outdir}
+
+echo Change directory
+cd ${outdir}
+
+#export SUBJECTS_DIR path
+echo Export subject directiory 
+export SUBJECTS_DIR=/project_space/ADNI_ROY/derivatives/freesurfer/
+
+#run freesrufer
+echo Run freesurfer
+
+recon-all -s $subj_name -i ${t1_file} -autorecon1 -gcareg -canorm -careg -rmneck -skull-lta -calabel -normalization2 
+

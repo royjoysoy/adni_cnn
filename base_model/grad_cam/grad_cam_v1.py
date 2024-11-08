@@ -1,3 +1,5 @@
+TEMPLATE_PATH = "/Desktop/adni_cnn/templates/mni305.cor.mgz" 
+
 import os
 import numpy as np
 import pandas as pd
@@ -192,14 +194,9 @@ class GradCAM:
             # 원래 상태로 복구
             input_image.requires_grad = original_requires_grad
 
-def save_gradcam_visualization(model, image, label, save_path):
+def save_gradcam_visualization(model, image, label, save_path, template_path=None):
     try:
-        # Load MNI template (you would need to specify the correct path)
-        template = nib.load('path_to_your_mni152_template.nii.gz').get_fdata()
-        template = skTrans.resize(template, (64, 64, 64), order=1, preserve_range=True)
-        # Z-score normalize template
-        template = (template - template.mean()) / template.std()
-        
+        # Generate GradCAM first
         gradcam = GradCAM(model)
         cam = gradcam.generate_cam(image.unsqueeze(0).to(device))
         
@@ -207,46 +204,77 @@ def save_gradcam_visualization(model, image, label, save_path):
             logging.warning(f"Failed to generate GradCAM for {save_path}")
             return
         
-        # Convert image to numpy and Z-score normalize for visualization
-        image_np = image[0].cpu().numpy()
-        image_np = (image_np - image_np.mean()) / image_np.std()
+        # Resize CAM to 64x64x64 for finer visualization
+        cam = torch.tensor(cam).to(device)
+        cam = F.interpolate(
+            cam.unsqueeze(0).unsqueeze(0),
+            size=(64, 64, 64),  # Interpolate to full image size
+            mode='trilinear',
+            align_corners=False
+        ).squeeze().cpu().numpy()
         
-        # Create figure with four columns: Original, Template, GradCAM, Overlay
+        # Convert image to numpy and normalize for visualization
+        image_np = image[0].cpu().numpy()
+        image_np = (image_np - image_np.min()) / (image_np.max() - image_np.min())
+        
+        # Load and preprocess template (only once)
+        if template_path and os.path.exists(template_path):
+            template = nib.load(template_path).get_fdata()
+            
+            # Crop template to match your preprocessing (173 x 199 x 215)
+            template = template[:173, :199, :215]
+            
+            # Resize to 64x64x64 to match your data
+            template = skTrans.resize(template, (64, 64, 64), order=1, preserve_range=True)
+            
+            # Normalize template
+            template = (template - template.min()) / (template.max() - template.min())
+        else:
+            template = image_np  # Use original image if no template
+            
+        # Create figure with four columns
         fig, axes = plt.subplots(3, 4, figsize=(20, 15))
         
+        # Define slice views
         views = ['Sagittal', 'Coronal', 'Axial']
-        slices = [
-            (lambda x: x[:, :, x.shape[2]//2],  # Sagittal
-             lambda x: x[:, x.shape[1]//2, :],  # Coronal
-             lambda x: x[x.shape[0]//2, :, :])  # Axial
-        ]
         
-        for i, (view, slice_fn) in enumerate(zip(views, slices)):
-            # Original patient MRI
-            patient_slice = slice_fn(image_np)  # Using normalized image
-            axes[i,0].imshow(patient_slice, cmap='gray', vmin=-3, vmax=3)  # Limit contrast to ±3 standard deviations
-            axes[i,0].set_title(f'{view} - Patient MRI')
+        # Get middle slices for each view
+        for i, view in enumerate(views):
+            if view == 'Sagittal':
+                img_slice = image_np[:, :, image_np.shape[2]//2]
+                cam_slice = cam[:, :, cam.shape[2]//2]
+                temp_slice = template[:, :, template.shape[2]//2]
+            elif view == 'Coronal':
+                img_slice = image_np[:, image_np.shape[1]//2, :]
+                cam_slice = cam[:, cam.shape[1]//2, :]
+                temp_slice = template[:, template.shape[1]//2, :]
+            else:  # Axial
+                img_slice = image_np[image_np.shape[0]//2, :, :]
+                cam_slice = cam[cam.shape[0]//2, :, :]
+                temp_slice = template[template.shape[0]//2, :, :]
+            
+            # Original image
+            axes[i,0].imshow(img_slice, cmap='gray')
+            axes[i,0].set_title(f'{view} - Original')
             axes[i,0].axis('off')
             
             # Template
-            template_slice = slice_fn(template)
-            axes[i,1].imshow(template_slice, cmap='gray', vmin=-3, vmax=3)
-            axes[i,1].set_title(f'{view} - MNI Template')
+            axes[i,1].imshow(temp_slice, cmap='gray')
+            axes[i,1].set_title(f'{view} - Template')
             axes[i,1].axis('off')
             
             # GradCAM
-            cam_slice = slice_fn(cam)
             axes[i,2].imshow(cam_slice, cmap='jet')
             axes[i,2].set_title(f'{view} - GradCAM')
             axes[i,2].axis('off')
             
-            # Overlay on patient MRI
-            axes[i,3].imshow(patient_slice, cmap='gray', vmin=-3, vmax=3)
+            # Overlay on template
+            axes[i,3].imshow(temp_slice, cmap='gray')
             axes[i,3].imshow(cam_slice, cmap='jet', alpha=0.6)
-            axes[i,3].set_title(f'{view} - Overlay')
+            axes[i,3].set_title(f'{view} - Template + GradCAM')
             axes[i,3].axis('off')
-            
-        plt.suptitle(f'GradCAM Visualization with MNI Template Reference - Class {label.argmax().item()}')
+        
+        plt.suptitle(f'GradCAM Visualization (Class {label.argmax().item()})')
         plt.tight_layout()
         plt.savefig(save_path)
         plt.close()
@@ -283,7 +311,8 @@ def validate(dataloader, model, criterion, device, epoch):
                         model, 
                         img[0],
                         label[0],
-                        f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}.png'
+                        f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}.png',
+                        template_path=TEMPLATE_PATH  # Add this line with your actual template path
                     )
             except Exception as e:
                 logging.error(f"Error during validation batch {batch_idx}: {str(e)}")

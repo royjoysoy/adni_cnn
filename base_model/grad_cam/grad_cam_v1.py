@@ -18,20 +18,10 @@ import sys
 import time
 import datetime as dt
 
-# Define template path
-TEMPLATE_PATH = "/home/simclr_project/SimCLR_RS/templates/mni305.cor.mgz"
-
-# Verify template exists
-if not os.path.exists(TEMPLATE_PATH):
-    raise FileNotFoundError(f"Template not found at {TEMPLATE_PATH}")
-    
-# Optional: Add logging for template path
-log_info(f"Using template from: {TEMPLATE_PATH}")
-
 # Create logs directory if it doesn't exist
 os.makedirs('logs', exist_ok=True)
 
-# Set up logging
+# Set up logging first
 current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
 log_filename = f'logs/training_log_{current_time}.log'
 
@@ -45,7 +35,18 @@ logging.basicConfig(
 )
 
 def log_info(message):
+    """Helper function for logging info messages"""
     logging.info(message)
+
+# Define template path
+TEMPLATE_PATH = "/home/simclr_project/simclr/SimCLR_RS/templates/mni305.cor.mgz"
+
+# Verify template exists
+if not os.path.exists(TEMPLATE_PATH):
+    raise FileNotFoundError(f"Template not found at {TEMPLATE_PATH}")
+    
+# Now we can safely use log_info
+log_info(f"Using template from: {TEMPLATE_PATH}")
 
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

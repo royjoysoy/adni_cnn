@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 from tqdm import tqdm
 import logging
 import time
@@ -99,15 +99,11 @@ def train_epoch(net, data_loader, optimizer, temperature, simclr_batch_size, aug
             else:  # cutmix
                 pos_1, targets_a, targets_b, lam = cutmix_data_3d(pos_1, target, alpha=1.0)
                 pos_2, _, _, _ = cutmix_data_3d(pos_2, target, alpha=1.0)
-        elif aug_type in ['geometric_intensity', 'noise_artifact', 'clinical_acquisition']:
-            # Handle combined transformations
-            pos_1, pos_2, target = data
-            pos_1, pos_2 = pos_1.cuda(non_blocking=True), pos_2.cuda(non_blocking=True)
         else:
             pos_1, pos_2, target = data
             pos_1, pos_2 = pos_1.cuda(non_blocking=True), pos_2.cuda(non_blocking=True)
 
-        with autocast():
+        with torch.amp.autocast(device_type='cuda'):  # Fixed autocast usage
             out_1 = net(pos_1)
             out_2 = net(pos_2)
             out = torch.cat([out_1, out_2], dim=0)
@@ -188,7 +184,7 @@ def test(net, memory_data_loader, test_data_loader, simclr_epoch, total_simclr_e
             total_num += data.size(0)
             
             # Compute similarity efficiently
-            with torch.cuda.amp.autocast(enabled=True):
+            with torch.amp.autocast(device_type='cuda', enabled=True):
                 sim_matrix = torch.mm(feature, feature_bank)
                 sim_weight, sim_indices = sim_matrix.topk(k=k, dim=-1)
                 sim_labels = torch.gather(feature_labels.expand(data.size(0), -1), dim=-1, index=sim_indices)

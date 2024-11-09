@@ -8,8 +8,8 @@ from zoneinfo import ZoneInfo
 import torch
 import torch.optim as optim
 import torchio as tio
-from torch.optim.lr_scheduler import CosineAnnealingLR # model 2 update 1
-from torch.cuda.amp import GradScaler
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.amp import GradScaler
 from torch.utils.tensorboard import SummaryWriter
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -50,7 +50,7 @@ def main():
     simclr_epochs = config.simclr_epochs 
     linear_eval_epochs = config.linear_eval_epochs
     num_classes = 3
-    scaler = GradScaler('cuda')
+    scaler = GradScaler()
 
     logging.info(f"SimCLR parameters: feature_dim={feature_dim}, temperature={temperature}")
 

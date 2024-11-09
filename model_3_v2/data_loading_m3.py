@@ -6,6 +6,7 @@ import skimage.transform as skTrans
 from sklearn.model_selection import train_test_split
 import torchio as tio
 import numpy as np
+import logging
 
 print("Start of file")
 print("Importing torch")
@@ -34,10 +35,15 @@ class ADNI_3_Class(Dataset):
         target = self.data_df.iloc[idx]['DX2']
         target = torch.tensor(target, dtype=torch.long)
 
-        img = nib.load(img_path).get_fdata()
-        img = skTrans.resize(img, (64, 64, 64), order=1, preserve_range=True)
-        img = (img - img.min()) / (img.max() - img.min())
-        img = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
+        try:
+            img = nib.load(img_path).get_fdata()
+            img = skTrans.resize(img, (64, 64, 64), order=1, preserve_range=True)
+            img = (img - img.min()) / (img.max() - img.min())
+            img = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
+        except Exception as e:
+            logging.error(f"Error loading image {img_path}: {str(e)}")
+            # Return a zero tensor of correct shape if image loading fails
+            img = torch.zeros(1, 64, 64, 64, dtype=torch.float32)
 
         if self.transform:
             pos_1 = self.transform(img)
@@ -58,71 +64,107 @@ class ADNI_3_Class(Dataset):
 # custom_std = 34.073
 
 def get_mr_transforms():
-    # First define the strong augmentations
+    # Define strong augmentations with optimized parameters
     mr_transforms = {
-        'flip': tio.RandomFlip(axes=(0, 1, 2)),
-        'anisotropy': tio.RandomAnisotropy(downsampling=(1, 2.5)),
-        'swap': tio.RandomSwap(patch_size=15, num_iterations=100),
-        'elastic': tio.RandomElasticDeformation(num_control_points=7, max_displacement=7.5),
-        'bias_field': tio.RandomBiasField(coefficients=0.5),
-        'blur': tio.RandomBlur(std=(0, 4)),
-        'gamma': tio.RandomGamma(log_gamma=(-0.3, 0.3)),
-        'spike': tio.RandomSpike(num_spikes=1, intensity=(0.1, 1)),
-        'ghost': tio.RandomGhosting(num_ghosts=2, intensity=(0.5, 1)),
-        'noise': tio.RandomNoise(mean=0, std=(0, 0.25)),
-        'motion': tio.RandomMotion(degrees=10, translation=10),
-        'mixup': tio.Compose([]),  # Placeholder for mixup
-        'cutmix': tio.Compose([])  # Placeholder for cutmix
+        'flip': tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.8),  # Increased probability
+        'anisotropy': tio.RandomAnisotropy(downsampling=(1, 3.0)),  # Increased range
+        'swap': tio.RandomSwap(patch_size=20, num_iterations=150),  # Increased patch size
+        'elastic': tio.RandomElasticDeformation(
+            num_control_points=8,
+            max_displacement=8.0,
+            locked_borders=2
+        ),
+        'bias_field': tio.RandomBiasField(coefficients=0.6),  # Increased coefficient
+        'blur': tio.RandomBlur(std=(0, 5)),  # Increased blur range
+        'gamma': tio.RandomGamma(log_gamma=(-0.4, 0.4)),  # Increased range
+        'spike': tio.RandomSpike(num_spikes=2, intensity=(0.1, 1.2)),  # Increased intensity
+        'ghost': tio.RandomGhosting(num_ghosts=3, intensity=(0.5, 1.2)),  # Increased ghosts
+        'noise': tio.RandomNoise(mean=0, std=(0, 0.3)),  # Increased noise
+        'motion': tio.RandomMotion(degrees=15, translation=12),  # Increased motion
+        'mixup': tio.Compose([]),
+        'cutmix': tio.Compose([])
     }
 
-    # Then return complete dictionary with both base and strong augmentations
-    return {
-        'base': tio.Compose([
-            # Essential preprocessing
-            tio.ToCanonical(),            # Ensure canonical orientation
-            
-            # Standard augmentations for fine-tuning (following SimCLR paper's approach)
-            tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.5),  # Random flipping
+    # Define combined transformations with strong augmentation chains
+    combined_transforms = {
+        # Combination 1: Geometric + Intensity (Strong)
+        'geometric_intensity': tio.Compose([
+            tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.8),
             tio.RandomAffine(
-                scales=(0.95, 1.05),      # Slight random scaling (5%)
-                degrees=10,                # Slight rotation (10 degrees)
-                translation=5,             # Small translations (5 voxels)
-                isotropic=True,            # Same transformation for all dimensions
-                p=0.5                      # 50% probability of applying
+                scales=(0.9, 1.1),
+                degrees=15,
+                translation=10,
+                isotropic=True,
+                p=0.9
             ),
-            tio.RescaleIntensity(
-                out_min_max=(0, 1),       # Normalize intensity to [0,1]
-                percentiles=(1, 99)        # Robust scaling using percentiles
+            tio.RandomElasticDeformation(
+                num_control_points=8,
+                max_displacement=8.0,
+                locked_borders=2
             ),
-            
-            # Optional: add slight noise to improve robustness
-            tio.RandomNoise(
-                mean=0,
-                std=0.01,                 # Very small noise
-                p=0.2                     # 20% probability
-            ),
+            tio.RandomGamma(log_gamma=(-0.4, 0.4)),
+            tio.RandomBlur(std=(0, 4)),
+            tio.RandomBiasField(coefficients=0.5)
+        ]),
+        
+        # Combination 2: Noise + Artifact (Strong)
+        'noise_artifact': tio.Compose([
+            tio.RandomNoise(mean=0, std=(0, 0.3)),
+            tio.RandomSpike(num_spikes=2, intensity=(0.1, 1.2)),
+            tio.RandomGhosting(num_ghosts=3, intensity=(0.5, 1.2)),
+            tio.RandomMotion(degrees=15, translation=12),
+            tio.RandomBlur(std=(0, 3)),
+            tio.RandomAnisotropy(downsampling=(1, 2.5))
         ]),
 
-        'flip': mr_transforms['flip'],
-        'anisotropy': mr_transforms['anisotropy'],
-        'swap': mr_transforms['swap'],
-        'elastic': mr_transforms['elastic'],
-        'bias_field': mr_transforms['bias_field'],
-        'blur': mr_transforms['blur'],
-        'gamma': mr_transforms['gamma'],
-        'spike': mr_transforms['spike'],
-        'ghost': mr_transforms['ghost'],
-        'noise': mr_transforms['noise'],
-        'motion': mr_transforms['motion'],
-        'mixup': mr_transforms['mixup'],
-        'cutmix': mr_transforms['cutmix']
+        # Combination 3: Clinical + Acquisition (New)
+        'clinical_acquisition': tio.Compose([
+            tio.RandomAffine(
+                scales=(0.95, 1.05),
+                degrees=10,
+                translation=8,
+                isotropic=False
+            ),
+            tio.RandomBiasField(coefficients=0.4),
+            tio.RandomNoise(mean=0, std=(0, 0.2)),
+            tio.RandomGhosting(num_ghosts=2, intensity=(0.3, 0.8)),
+            tio.RandomBlur(std=(0, 2)),
+            tio.RandomGamma(log_gamma=(-0.3, 0.3))
+        ])
     }
 
+    # Merge transforms dictionaries
+    mr_transforms.update(combined_transforms)
+
+    # Base transform with optimized parameters
+    base_transform = tio.Compose([
+        tio.ToCanonical(),
+        tio.RandomFlip(axes=(0, 1, 2), flip_probability=0.5),
+        tio.RandomAffine(
+            scales=(0.95, 1.05),
+            degrees=10,
+            translation=5,
+            isotropic=True,
+            p=0.8
+        ),
+        tio.RescaleIntensity(
+            out_min_max=(0, 1),
+            percentiles=(0.5, 99.5),  # Adjusted percentiles
+            masking_method="threshold"
+        ),
+        tio.RandomNoise(
+            mean=0,
+            std=0.015,
+            p=0.3
+        ),
+    ])
+
+    transforms = {'base': base_transform}
+    transforms.update(mr_transforms)
+    
+    return transforms
+
 def get_data_loaders(train_df, val_df, test_df, batch_size, transforms):
-    """
-    Create data loaders with proper augmentations.
-    Now includes properly configured base transformations for fine-tuning.
-    """
     train_loaders = {}
     for aug_type, transform in transforms.items():
         train_dataset = ADNI_3_Class(data_df=train_df, transform=transform, aug_type=aug_type)
@@ -130,7 +172,9 @@ def get_data_loaders(train_df, val_df, test_df, batch_size, transforms):
             train_dataset, 
             batch_size=batch_size, 
             shuffle=True, 
-            drop_last=True
+            drop_last=True,
+            pin_memory=True,  
+            num_workers=8     
         )
 
     # Use base transform for validation and test (no augmentation needed)
@@ -142,7 +186,13 @@ def get_data_loaders(train_df, val_df, test_df, batch_size, transforms):
         ]), 
         aug_type='base'
     )
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    val_loader = DataLoader(
+        val_dataset, 
+        batch_size=batch_size, 
+        shuffle=False,
+        pin_memory=True,
+        num_workers=8
+    )
 
     test_dataset = ADNI_3_Class(
         data_df=test_df, 
@@ -152,7 +202,13 @@ def get_data_loaders(train_df, val_df, test_df, batch_size, transforms):
         ]), 
         aug_type='base'
     )
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(
+        test_dataset, 
+        batch_size=batch_size, 
+        shuffle=False,
+        pin_memory=True,
+        num_workers=8
+    )
 
     return train_loaders, val_loader, test_loader
 

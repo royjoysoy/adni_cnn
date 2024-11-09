@@ -40,7 +40,7 @@ class TrainingConfig:
         self.simclr_epochs = args.simclr_epochs
         self.warmup_epochs = args.warmup_epochs
         
-         # Linear evaluation parameters
+        # Linear evaluation parameters
         self.linear_eval_batch_size = args.linear_eval_batch_size
         self.linear_eval_epochs = args.linear_eval_epochs
         self.linear_eval_warmup_epochs = args.linear_eval_warmup_epochs
@@ -78,69 +78,69 @@ class TrainingConfig:
         DEFAULT_SAVE_DIR = '/home/simclr_project/simclr/SimCLR_RS/model_3_v2'
         
         parser = argparse.ArgumentParser(description='Train SimCLR')
-        # SimCLR parameters
-        parser.add_argument('--feature_dim', default=128, type=int,
+        # SimCLR parameters - Optimized for A100 40GB
+        parser.add_argument('--feature_dim', default=256, type=int,
                         help='Feature dimension for SimCLR')
-        parser.add_argument('--temperature', default=0.5, type=float,
+        parser.add_argument('--temperature', default=0.07, type=float,
                         help='Temperature parameter for contrastive loss')
-        parser.add_argument('--k', default=8, type=int,
+        parser.add_argument('--k', default=16, type=int,
                         help='Number of neighbors for kNN classifier')
-        parser.add_argument('--simclr_batch_size', default=2, type=int,
+        parser.add_argument('--simclr_batch_size', default=64, type=int,
                         help='Batch size for SimCLR training')
-        parser.add_argument('--simclr_epochs', default=1, type=int,  # Changed from 2 to 1
+        parser.add_argument('--simclr_epochs', default=200, type=int,
                         help='Number of epochs to train for SimCLR')
-        parser.add_argument('--warmup_epochs', default=0, type=int,  # Changed from 1 to 0
+        parser.add_argument('--warmup_epochs', default=20, type=int,
                         help='Number of epochs for learning rate warm-up')
         
         # Linear evaluation parameters
-        parser.add_argument('--linear_eval_batch_size', default=4, type=int,
+        parser.add_argument('--linear_eval_batch_size', default=128, type=int,
                         help='Batch size for linear evaluation')
-        parser.add_argument('--linear_eval_epochs', default=1, type=int,  # Changed from 2 to 1
+        parser.add_argument('--linear_eval_epochs', default=100, type=int,
                         help='Number of epochs for linear evaluation')
-        parser.add_argument('--linear_eval_warmup_epochs', default=0, type=int,  # Changed from 1 to 0
+        parser.add_argument('--linear_eval_warmup_epochs', default=10, type=int,
                         help='Number of epochs for learning rate warm-up in linear evaluation')
-        parser.add_argument('--linear_eval_lr', default=1e-5, type=float,
+        parser.add_argument('--linear_eval_lr', default=5e-4, type=float,
                         help='Initial learning rate for linear evaluation')
-        parser.add_argument('--linear_eval_weight_decay', default=1e-4, type=float,
+        parser.add_argument('--linear_eval_weight_decay', default=1e-6, type=float,
                         help='Weight decay for linear evaluation optimizer')
         
         # Optimization parameters
-        parser.add_argument('--lr', default=1e-5, type=float,
+        parser.add_argument('--lr', default=4.8e-3, type=float,
                         help='Initial learning rate')
-        parser.add_argument('--weight_decay', default=1e-4, type=float,
+        parser.add_argument('--weight_decay', default=1e-6, type=float,
                         help='Weight decay for optimizer')
-        parser.add_argument('--scheduler_factor', default=0.1, type=float,
+        parser.add_argument('--scheduler_factor', default=0.2, type=float,
                         help='Factor by which the learning rate will be reduced')
-        parser.add_argument('--scheduler_patience', default=5, type=int,
+        parser.add_argument('--scheduler_patience', default=15, type=int,
                         help='Number of epochs with no improvement after which learning rate will be reduced')
         parser.add_argument('--scheduler_min_lr', default=1e-6, type=float,
                         help='A lower bound on the learning rate')
-        parser.add_argument('--early_stopping_patience', default=2, type=int,
+        parser.add_argument('--early_stopping_patience', default=30, type=int,
                         help='Patience for early stopping')
         
         # Fine-tuning parameters
-        parser.add_argument('--ft_epochs', default=1, type=int,  # Changed from 50 to 1
+        parser.add_argument('--ft_epochs', default=100, type=int,
                         help='Number of fine-tuning epochs')
-        parser.add_argument('--ft_encoder_lr', default=1e-4, type=float,
+        parser.add_argument('--ft_encoder_lr', default=2e-4, type=float,
                         help='Learning rate for fine-tuning encoder')
-        parser.add_argument('--ft_classifier_lr', default=1e-3, type=float,
+        parser.add_argument('--ft_classifier_lr', default=2e-3, type=float,
                         help='Learning rate for fine-tuning classifier')
-        parser.add_argument('--ft_warmup_epochs', default=0, type=int,  # Changed from 5 to 0
+        parser.add_argument('--ft_warmup_epochs', default=10, type=int,
                         help='Number of warmup epochs for fine-tuning')
-        parser.add_argument('--ft_unfreeze_epoch', default=0, type=int,  # Changed from 5 to 0
+        parser.add_argument('--ft_unfreeze_epoch', default=15, type=int,
                         help='Epoch to unfreeze encoder in gradual strategy')
         parser.add_argument('--ft_unfreeze_strategy', default='gradual', type=str,
                         choices=['all', 'gradual', 'last_n'],
-                        help='Strategy for unfreezing layers during fine-tuning') 
+                        help='Strategy for unfreezing layers during fine-tuning')
         
-        # Other parameters
-        parser.add_argument('--num_workers', default=2, type=int,
+        # Other parameters - Optimized for A100
+        parser.add_argument('--num_workers', default=8, type=int,
                         help='Number of workers for data loading')
         parser.add_argument('--seed', default=42, type=int,
                         help='Random seed for reproducibility')
-        parser.add_argument('--log_interval', default=10, type=int,
+        parser.add_argument('--log_interval', default=20, type=int,
                         help='How many batches to wait before logging training status')
-        parser.add_argument('--save_interval', default=1, type=int,  # Changed from 5 to 1
+        parser.add_argument('--save_interval', default=5, type=int,
                         help='How many epochs to wait before saving a model checkpoint')
         parser.add_argument('--data_path', default=DEFAULT_DATA_PATH, type=str,
                         help='Path to the data CSV file')

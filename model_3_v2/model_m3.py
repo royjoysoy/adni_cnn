@@ -51,44 +51,73 @@ class Custom3DCNN(nn.Module):
         return out
 
 class SimCLR3DCNN(nn.Module):
-    def __init__(self, feature_dim=128, num_classes=3):
+    def __init__(self, feature_dim=256, num_classes=3):  # Increased feature_dim
         super(SimCLR3DCNN, self).__init__()
         self.f = Custom3DCNN()
-        # Remove the last fully connected layer and softmax from Custom3DCNN??
         self.f.fc3 = nn.Identity()
         self.f.softmax = nn.Identity()
-        # We'll determine the size of this layer dynamically
         self.adaptive_layer = None
-        # Projection head
+        
+        # Enhanced projection head with larger dimensions
         self.g = nn.Sequential(
-            nn.Linear(1728, feature_dim, bias=False),
+            nn.Linear(1728, 2048, bias=False),  # Larger intermediate dimension
+            nn.BatchNorm1d(2048),
+            nn.ReLU(inplace=True),
+            nn.Linear(2048, feature_dim, bias=False),
             nn.BatchNorm1d(feature_dim),
             nn.ReLU(inplace=True),
             nn.Linear(feature_dim, feature_dim, bias=True)
         )
+        
         self.feature_dim = feature_dim
         self.num_classes = num_classes
         self.classifier = None
+        
+        # Enable gradient checkpointing for memory efficiency
+        self.use_checkpointing = True
 
     def forward(self, x, return_features=False):
-        x = self.f(x)
-        x = x.view(x.size(0), -1)  # Flatten the output
+        if self.use_checkpointing and self.training:
+            x = torch.utils.checkpoint.checkpoint(self.f, x)
+        else:
+            x = self.f(x)
+            
+        x = x.view(x.size(0), -1)
+        
         if self.adaptive_layer is None:
             self.adaptive_layer = nn.Linear(x.shape[1], 1728).to(x.device)
+            # Initialize with Kaiming initialization
+            nn.init.kaiming_normal_(self.adaptive_layer.weight)
+            if self.adaptive_layer.bias is not None:
+                nn.init.zeros_(self.adaptive_layer.bias)
+                
         x = self.adaptive_layer(x)
         feature = x
+        
         if return_features:
             return feature
-        out = self.g(feature)
+        
+        if self.use_checkpointing and self.training:
+            out = torch.utils.checkpoint.checkpoint(self.g, feature)
+        else:
+            out = self.g(feature)
+            
         return F.normalize(out, dim=-1)
+            
 
     def get_features(self, x):
-        x = self.f(x)
-        x = x.view(x.size(0), -1)  # Flatten the output
+        if self.use_checkpointing and self.training:
+            x = torch.utils.checkpoint.checkpoint(self.f, x)
+        else:
+            x = self.f(x)
+        x = x.view(x.size(0), -1)
         if self.adaptive_layer is None:
             self.adaptive_layer = nn.Linear(x.shape[1], 1728).to(x.device)
+            nn.init.kaiming_normal_(self.adaptive_layer.weight)
+            if self.adaptive_layer.bias is not None:
+                nn.init.zeros_(self.adaptive_layer.bias)
         x = self.adaptive_layer(x)
-        return x  # Return features before projection head
+        return x
 
     def freeze_encoder(self):
         for param in self.f.parameters():

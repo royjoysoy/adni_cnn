@@ -20,34 +20,42 @@ def fine_tune(
     unfreeze_strategy='all',
     start_epoch=0
 ):
-    """
-    Fine-tune a pre-trained model.
-    
-    Args:
-        net: Pre-trained model
-        train_loader: Training data loader
-        val_loader: Validation data loader
-        config: Training configuration
-        writer: TensorBoard writer
-        save_dir: Directory to save checkpoints
-        unfreeze_strategy: Strategy for unfreezing layers ('all', 'gradual', or 'last_n')
-        start_epoch: Starting epoch number
-    """
     device = next(net.parameters()).device
     scaler = GradScaler()
     criterion = nn.CrossEntropyLoss()
     
+    # Recreate data loaders with optimized batch size
+    train_dataset = train_loader.dataset
+    val_dataset = val_loader.dataset
+    
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=config.ft_batch_size,
+        shuffle=True,
+        num_workers=8,
+        pin_memory=True
+    )
+    
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=config.ft_batch_size * 2,
+        shuffle=False,
+        num_workers=8,
+        pin_memory=True
+    )
+    
+    # Calculate gradient accumulation steps
+    effective_batch_size = 128  # Target batch size
+    accumulation_steps = max(1, effective_batch_size // config.ft_batch_size)
+    
     # Prepare the model for fine-tuning
     if unfreeze_strategy == 'all':
-        # Unfreeze all layers
         for param in net.parameters():
             param.requires_grad = True
     elif unfreeze_strategy == 'gradual':
-        # Start with only classifier unfrozen
         net.freeze_encoder()
         net.classifier.requires_grad_(True)
     elif unfreeze_strategy == 'last_n':
-        # Unfreeze last n layers (example: last conv block and classifier)
         net.freeze_encoder()
         for param in net.f.conv3.parameters():
             param.requires_grad = True
@@ -55,7 +63,7 @@ def fine_tune(
             param.requires_grad = True
         net.classifier.requires_grad_(True)
     
-    # Use different learning rates for pre-trained layers and new layers
+    # Optimizer setup
     encoder_params = [p for name, p in net.named_parameters() if 'classifier' not in name and p.requires_grad]
     classifier_params = [p for name, p in net.named_parameters() if 'classifier' in name and p.requires_grad]
     
@@ -80,37 +88,46 @@ def fine_tune(
         train_loss = 0.0
         train_correct = 0
         train_total = 0
+        optimizer.zero_grad(set_to_none=True)
         
         train_bar = tqdm(train_loader, desc=f'Fine-tuning Epoch {epoch + 1}/{config.ft_epochs}')
         
         for batch_idx, (inputs, _, targets) in enumerate(train_bar):
             inputs, targets = inputs.to(device), targets.to(device)
             
-            optimizer.zero_grad()
-            
             with autocast():
                 outputs = net.classify(inputs)
-                loss = criterion(outputs, targets)
+                loss = criterion(outputs, targets) / accumulation_steps
             
             scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
             
-            train_loss += loss.item()
+            if (batch_idx + 1) % accumulation_steps == 0:
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+            
+            train_loss += loss.item() * accumulation_steps
             _, predicted = outputs.max(1)
             train_total += targets.size(0)
             train_correct += predicted.eq(targets).sum().item()
             
             train_bar.set_postfix({
-                'Loss': f'{loss.item():.4f}',
+                'Loss': f'{loss.item() * accumulation_steps:.4f}',
                 'Acc': f'{100. * train_correct / train_total:.2f}%'
             })
             
             if batch_idx % config.log_interval == 0:
                 writer.add_scalar('Fine-tune/train_loss_step', 
-                                loss.item(),
+                                loss.item() * accumulation_steps,
                                 epoch * len(train_loader) + batch_idx)
+                
+            # Memory management
+            if batch_idx % 50 == 0:
+                torch.cuda.empty_cache()
         
+        # Calculate training metrics
         train_loss = train_loss / len(train_loader)
         train_acc = 100. * train_correct / train_total
         
@@ -123,7 +140,7 @@ def fine_tune(
         all_predictions = []
         
         with torch.no_grad():
-            for inputs, _, targets in tqdm(val_loader, desc='Validation'):
+            for batch_idx, (inputs, _, targets) in enumerate(tqdm(val_loader, desc='Validation')):
                 inputs, targets = inputs.to(device), targets.to(device)
                 
                 outputs = net.classify(inputs)
@@ -136,6 +153,10 @@ def fine_tune(
                 
                 all_targets.extend(targets.cpu().numpy())
                 all_predictions.extend(predicted.cpu().numpy())
+                
+                # Memory management
+                if batch_idx % 50 == 0:
+                    torch.cuda.empty_cache()
         
         val_loss = val_loss / len(val_loader)
         val_acc = 100. * val_correct / val_total
@@ -156,8 +177,10 @@ def fine_tune(
         
         # Learning rate scheduling
         scheduler.step()
-        current_lr = optimizer.param_groups[0]['lr']
-        writer.add_scalar('Fine-tune/learning_rate', current_lr, epoch)
+        current_lr_encoder = optimizer.param_groups[0]['lr']
+        current_lr_classifier = optimizer.param_groups[1]['lr']
+        writer.add_scalar('Fine-tune/learning_rate_encoder', current_lr_encoder, epoch)
+        writer.add_scalar('Fine-tune/learning_rate_classifier', current_lr_classifier, epoch)
         
         # Gradual unfreezing if using gradual strategy
         if unfreeze_strategy == 'gradual' and epoch == config.ft_unfreeze_epoch:
@@ -181,7 +204,8 @@ def fine_tune(
                 'val_acc': val_acc,
                 'train_acc': train_acc,
                 'val_loss': val_loss,
-                'train_loss': train_loss
+                'train_loss': train_loss,
+                'best_epoch': best_epoch
             }, checkpoint_path)
             
             logging.info(f'Saved best model with validation accuracy: {val_acc:.2f}%')

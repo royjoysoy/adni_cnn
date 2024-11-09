@@ -73,157 +73,242 @@ def train_epoch(net, data_loader, optimizer, temperature, simclr_batch_size, aug
     total_loss, total_num = 0.0, 0
     train_bar = tqdm(data_loader, desc=f'Train Epoch: [{simclr_epoch}/{total_simclr_epochs}] - {aug_type}')
     
+    torch.cuda.empty_cache()
+    
+    # Calculate accumulation steps based on desired batch size
+    effective_batch_size = next(iter(data_loader))[0].size(0)
+    accumulation_steps = max(1, simclr_batch_size // effective_batch_size)
+    optimizer.zero_grad(set_to_none=True)
+    
     for step, data in enumerate(train_bar):
         if aug_type in ['mixup', 'cutmix']:
             pos_1, pos_2, target, idx = data
             pos_1, pos_2, target = pos_1.cuda(non_blocking=True), pos_2.cuda(non_blocking=True), target.cuda(non_blocking=True)
             if aug_type == 'mixup':
-                # Generate mixup data for pos_1 and pos_2 separately
-                pos_1, targets_a, targets_b, lam = mixup_data(pos_1, target)
-                pos_2, _, _, _ = mixup_data(pos_2, target)  # Generate new mixup for pos_2
+                pos_1, targets_a, targets_b, lam = mixup_data(pos_1, target, alpha=1.0)
+                pos_2, _, _, _ = mixup_data(pos_2, target, alpha=1.0)
             else:  # cutmix
-                pos_1, targets_a, targets_b, lam = cutmix_data_3d(pos_1, target)
-                pos_2, _, _, _ = cutmix_data_3d(pos_2, target)  # Generate new cutmix for pos_2
+                pos_1, targets_a, targets_b, lam = cutmix_data_3d(pos_1, target, alpha=1.0)
+                pos_2, _, _, _ = cutmix_data_3d(pos_2, target, alpha=1.0)
+        elif aug_type in ['geometric_intensity', 'noise_artifact', 'clinical_acquisition']:
+            # Handle combined transformations
+            pos_1, pos_2, target = data
+            pos_1, pos_2 = pos_1.cuda(non_blocking=True), pos_2.cuda(non_blocking=True)
         else:
             pos_1, pos_2, target = data
             pos_1, pos_2 = pos_1.cuda(non_blocking=True), pos_2.cuda(non_blocking=True)
-
-        optimizer.zero_grad()
 
         with autocast():
             out_1 = net(pos_1)
             out_2 = net(pos_2)
             out = torch.cat([out_1, out_2], dim=0)
+            
+            # Single autocast context for all computations
             sim_matrix = torch.exp(torch.mm(out, out.t().contiguous()) / temperature)
-            mask = (torch.ones_like(sim_matrix) - torch.eye(2 * simclr_batch_size, device=sim_matrix.device)).bool()
-            sim_matrix = sim_matrix.masked_select(mask).view(2 * simclr_batch_size, -1)
+            mask = (torch.ones_like(sim_matrix) - torch.eye(2 * pos_1.size(0), device=sim_matrix.device)).bool()
+            sim_matrix = sim_matrix.masked_select(mask).view(2 * pos_1.size(0), -1)
+            
             pos_sim = torch.exp(torch.sum(out_1 * out_2, dim=-1) / temperature)
             pos_sim = torch.cat([pos_sim, pos_sim], dim=0)
-            loss = (- torch.log(pos_sim / sim_matrix.sum(dim=-1))).mean()
+            loss = (- torch.log(pos_sim / sim_matrix.sum(dim=-1))).mean() / accumulation_steps
 
         scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
 
-        total_num += simclr_batch_size
-        total_loss += loss.item() * simclr_batch_size
-        train_bar.set_description(f'Train Epoch: [{simclr_epoch}/{total_simclr_epochs}] - {aug_type} Loss: {total_loss / total_num:.4f}')
+        if (step + 1) % accumulation_steps == 0:
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=1.0)
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad(set_to_none=True)
 
-        if step % 10 == 0:  # Log every 10 steps
-            writer.add_scalar(f'Loss/train_{aug_type}_step', loss.item(), simclr_epoch * len(data_loader) + step)
-            logging.info(f'Epoch: [{simclr_epoch}/{total_simclr_epochs}], Step: [{step}/{len(data_loader)}], Aug: {aug_type}, Loss: {loss.item():.4f}')
+        total_num += pos_1.size(0)
+        total_loss += loss.item() * pos_1.size(0) * accumulation_steps
+
+        if step % 10 == 0:
+            current_lr = optimizer.param_groups[0]['lr']
+            train_bar.set_description(
+                f'Train Epoch: [{simclr_epoch}/{total_simclr_epochs}] - {aug_type} '
+                f'Loss: {total_loss / total_num:.4f} LR: {current_lr:.6f}'
+            )
+            writer.add_scalar(f'Loss/train_{aug_type}_step', loss.item() * accumulation_steps, 
+                            simclr_epoch * len(data_loader) + step)
+            writer.add_scalar(f'Memory/allocated', torch.cuda.memory_allocated() / 1024**3, 
+                            simclr_epoch * len(data_loader) + step)
+
+        # Memory management for A100
+        if step % 50 == 0:
+            torch.cuda.empty_cache()
 
     avg_loss = total_loss / total_num
     writer.add_scalar(f'Loss/train_{aug_type}_epoch', avg_loss, simclr_epoch)
-    logging.info(f'Epoch: [{simclr_epoch}/{total_simclr_epochs}], Aug: {aug_type}, Avg Train Loss: {avg_loss:.4f}')
     return avg_loss
 
 def test(net, memory_data_loader, test_data_loader, simclr_epoch, total_simclr_epochs, k, temperature, writer):
     net.eval()
-    total_top1, total_top5, total_num, feature_bank = 0.0, 0.0, 0, []
+    feature_bank = []
+    chunk_size = 32  # Process in chunks to manage memory
+    
     with torch.no_grad():
-        # generate feature bank
-        for data, _, target in tqdm(memory_data_loader, desc='Feature extracting'):
-            feature = net(data.cuda(non_blocking=True))
-            feature_bank.append(feature)
-        # [D, N]
-        feature_bank = torch.cat(feature_bank, dim=0).t().contiguous()
-        # [N]
+        # Generate feature bank in chunks
+        for i in range(0, len(memory_data_loader.dataset), chunk_size):
+            chunk_data = [memory_data_loader.dataset[j][0] for j in range(i, min(i + chunk_size, len(memory_data_loader.dataset)))]
+            chunk_data = torch.stack(chunk_data).cuda(non_blocking=True)
+            chunk_features = net(chunk_data)
+            feature_bank.append(chunk_features.cpu())  # Move to CPU to save GPU memory
+            
+        feature_bank = torch.cat(feature_bank, dim=0).t().contiguous().cuda()
         feature_labels = torch.tensor(memory_data_loader.dataset.targets, device=feature_bank.device)
-        # loop test data to predict the label by weighted knn search
-        test_bar = tqdm(test_data_loader)
+        
+        total_top1, total_top5, total_num = 0.0, 0.0, 0
+        test_bar = tqdm(test_data_loader, desc='Testing')
+        
         for data, _, target in test_bar:
             data, target = data.cuda(non_blocking=True), target.cuda(non_blocking=True)
             feature = net(data)
 
             total_num += data.size(0)
-            # compute cos similarity between each feature vector and feature bank ---> [B, N]
-            sim_matrix = torch.mm(feature, feature_bank)
-            # [B, K]
-            sim_weight, sim_indices = sim_matrix.topk(k=k, dim=-1)
-            # [B, K]
-            sim_labels = torch.gather(feature_labels.expand(data.size(0), -1), dim=-1, index=sim_indices)
-            sim_weight = (sim_weight / temperature).exp()
+            
+            # Compute similarity efficiently
+            with torch.cuda.amp.autocast(enabled=True):
+                sim_matrix = torch.mm(feature, feature_bank)
+                sim_weight, sim_indices = sim_matrix.topk(k=k, dim=-1)
+                sim_labels = torch.gather(feature_labels.expand(data.size(0), -1), dim=-1, index=sim_indices)
+                sim_weight = (sim_weight / temperature).exp()
 
-            # counts for each class
-            one_hot_label = torch.zeros(data.size(0) * k, 3, device=sim_labels.device)
-            # [B*K, C]
-            one_hot_label = one_hot_label.scatter(dim=-1, index=sim_labels.view(-1, 1), value=1.0)
-            # weighted score ---> [B, C]
-            pred_scores = torch.sum(one_hot_label.view(data.size(0), -1, 3) * sim_weight.unsqueeze(dim=-1), dim=1)
+                # Weighted kNN voting
+                one_hot_label = torch.zeros(data.size(0) * k, 3, device=sim_labels.device)
+                one_hot_label = one_hot_label.scatter(dim=-1, index=sim_labels.view(-1, 1), value=1.0)
+                pred_scores = torch.sum(one_hot_label.view(data.size(0), -1, 3) * sim_weight.unsqueeze(dim=-1), dim=1)
 
             pred_labels = pred_scores.argsort(dim=-1, descending=True)
             total_top1 += torch.sum((pred_labels[:, :1] == target.unsqueeze(dim=-1)).any(dim=-1).float()).item()
             total_top5 += torch.sum((pred_labels[:, :5] == target.unsqueeze(dim=-1)).any(dim=-1).float()).item()
-            test_bar.set_description('Test Epoch: [{}/{}] Acc@1:{:.2f}% Acc@5:{:.2f}%'
-                             .format(simclr_epoch, total_simclr_epochs, total_top1 / total_num * 100, total_top5 / total_num * 100))
+            
+            test_bar.set_description(
+                f'Test Epoch: [{simclr_epoch}/{total_simclr_epochs}] '
+                f'Acc@1:{total_top1 / total_num * 100:.2f}% '
+                f'Acc@5:{total_top5 / total_num * 100:.2f}%'
+            )
+            
+            # Clear unnecessary tensors
+            del sim_matrix, sim_weight, sim_indices, sim_labels, one_hot_label, pred_scores, pred_labels
+            torch.cuda.empty_cache()
 
     test_accuracy = total_top1 / total_num * 100
-
     writer.add_scalar('test/accuracy', test_accuracy, simclr_epoch)
-    logging.info(f'Test Epoch: [{simclr_epoch}/{total_simclr_epochs}] Acc@1:{total_top1 / total_num * 100:.2f}% Acc@5:{total_top5 / total_num * 100:.2f}%')
+    writer.add_scalar('test/top5_accuracy', total_top5 / total_num * 100, simclr_epoch)
+    
+    logging.info(f'Test Epoch: [{simclr_epoch}/{total_simclr_epochs}] '
+                f'Acc@1:{total_top1 / total_num * 100:.2f}% '
+                f'Acc@5:{total_top5 / total_num * 100:.2f}%')
     return test_accuracy
 
-# model 2 update 4
+
 def run_ablation_study(net, train_loaders, val_loader, optimizer, simclr_epochs, temperature, simclr_batch_size, k, save_top_n, writer, scaler, warmup_epochs):
     results = {aug_type: {'train_loss': [], 'val_accuracy': [], 'aug_time': 0} for aug_type in train_loaders.keys()}
     best_models = []
     best_acc = 0
     total_simclr_time = 0
     no_improve = 0
-    patience = 10  # Early stopping patience
-    scheduler = WarmupCosineScheduler(optimizer, warmup_epochs=warmup_epochs, total_epochs=simclr_epochs)
+    patience = 30  # Increased patience for longer training
+    
+    scheduler = WarmupCosineScheduler(
+        optimizer, 
+        warmup_epochs=warmup_epochs,
+        total_epochs=simclr_epochs
+    )
+    
+    # Track exponential moving average of validation accuracies
+    ema_alpha = 0.9
+    ema_accuracies = {aug_type: 0 for aug_type in train_loaders.keys()}
     
     for simclr_epoch in range(1, simclr_epochs + 1):
+        epoch_start_time = time.time()
         logging.info(f"Starting SimCLR epoch {simclr_epoch}/{simclr_epochs}")
+        
+        # Train with all augmentation types
         epoch_val_accuracy = 0
         for aug_type, train_loader in train_loaders.items():
-            logging.info(f"Training with augmentation: {aug_type}")
             aug_start_time = time.time()
-            train_loss = train_epoch(net, train_loader, optimizer, temperature, simclr_batch_size, aug_type, simclr_epoch, simclr_epochs, writer, scaler)
-            aug_end_time = time.time()
-            results[aug_type]['aug_time'] += aug_end_time - aug_start_time
-            val_accuracy = test(net, train_loaders['base'], val_loader, simclr_epoch, simclr_epochs, k, temperature, writer)
-            epoch_val_accuracy += val_accuracy
+            
+            # Training phase
+            train_loss = train_epoch(
+                net, train_loader, optimizer, temperature, 
+                simclr_batch_size, aug_type, simclr_epoch, 
+                simclr_epochs, writer, scaler
+            )
+            
+            # Validation phase
+            val_accuracy = test(
+                net, train_loaders['base'], val_loader, 
+                simclr_epoch, simclr_epochs, k, temperature, writer
+            )
+            
+            # Update EMA accuracy
+            ema_accuracies[aug_type] = ema_alpha * ema_accuracies[aug_type] + (1 - ema_alpha) * val_accuracy
+            
+            # Update results
+            aug_time = time.time() - aug_start_time
+            results[aug_type]['aug_time'] += aug_time
             results[aug_type]['train_loss'].append(train_loss)
             results[aug_type]['val_accuracy'].append(val_accuracy)
-            logging.info(f'SimCLR Epoch {simclr_epoch}/{simclr_epochs}, Aug: {aug_type}, Train Loss: {train_loss:.4f}, Val Accuracy: {val_accuracy:.2f}%')
+            epoch_val_accuracy += val_accuracy
+            
+            logging.info(
+                f'SimCLR Epoch {simclr_epoch}/{simclr_epochs}, Aug: {aug_type}, '
+                f'Train Loss: {train_loss:.4f}, Val Accuracy: {val_accuracy:.2f}%, '
+                f'EMA Accuracy: {ema_accuracies[aug_type]:.2f}%, '
+                f'Time: {aug_time:.2f}s'
+            )
             writer.add_scalar(f'Loss/train_{aug_type}', train_loss, simclr_epoch)
             writer.add_scalar(f'Accuracy/val_{aug_type}', val_accuracy, simclr_epoch)
+            writer.add_scalar(f'Accuracy/ema_{aug_type}', ema_accuracies[aug_type], simclr_epoch)
+            writer.add_scalar(f'Time/aug_{aug_type}', aug_time, simclr_epoch)
         
+        # Calculate average validation accuracy
         avg_val_accuracy = epoch_val_accuracy / len(train_loaders)
+        avg_ema_accuracy = sum(ema_accuracies.values()) / len(ema_accuracies)
         
-        if avg_val_accuracy > best_acc:
-            best_acc = avg_val_accuracy
+        # Model saving logic with EMA consideration
+        if avg_ema_accuracy > best_acc:
+            best_acc = avg_ema_accuracy
             model_info = {
                 'simclr_epoch': simclr_epoch,
                 'accuracy': avg_val_accuracy,
+                'ema_accuracy': avg_ema_accuracy,
                 'state_dict': net.state_dict()
             }
             best_models.append(model_info)
-            best_models.sort(key=lambda x: x['accuracy'], reverse=True)
+            best_models.sort(key=lambda x: x['ema_accuracy'], reverse=True)
             best_models = best_models[:save_top_n]
-            logging.info(f"New best accuracy: {best_acc:.2f}%")
             no_improve = 0
+            logging.info(f"New best EMA accuracy: {best_acc:.2f}%")
         else:
             no_improve += 1
         
+        # Early stopping
         if no_improve >= patience:
             logging.info(f"Early stopping triggered at epoch {simclr_epoch}")
             break
         
+        # Step scheduler and log learning rate
         scheduler.step()
-        
-        # Log the learning rate
         current_lr = optimizer.param_groups[0]['lr']
-        writer.add_scalar('Learning Rate/train', current_lr, simclr_epoch)
-        logging.info(f"Current learning rate: {current_lr}")
+        writer.add_scalar('Learning_Rate/train', current_lr, simclr_epoch)
         
-        total_simclr_time += sum(results[aug_type]['aug_time'] for aug_type in results)
-        logging.info(f"Finished SimCLR epoch {simclr_epoch}/{simclr_epochs}")
-        logging.info(f"Average validation accuracy: {avg_val_accuracy:.2f}%")
+        # Log epoch summary
+        epoch_time = time.time() - epoch_start_time
+        total_simclr_time += epoch_time
+        logging.info(
+            f"Epoch {simclr_epoch} completed in {epoch_time:.2f}s. "
+            f"Average val accuracy: {avg_val_accuracy:.2f}%. "
+            f"Average EMA accuracy: {avg_ema_accuracy:.2f}%. "
+            f"Current LR: {current_lr:.6f}"
+        )
+        
+        # Memory management
+        torch.cuda.empty_cache()
     
-    logging.info(f"Ablation study completed. Total best models saved: {len(best_models)}")
     return results, best_models, total_simclr_time
 
 def linear_eval(net, train_loader, val_loader, optimizer, linear_eval_epochs, linear_eval_batch_size, writer):

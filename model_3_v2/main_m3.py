@@ -26,6 +26,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def main():
     config = TrainingConfig.get_default_config()
+
     logging.info("Starting the SimCLR training process from scratch")
 
     # Create save directory if it doesn't exist
@@ -304,7 +305,7 @@ def main():
     for aug_type, data in results.items():
         print(f"   {aug_type}: {data['aug_time'] / 60:.2f} minutes")
     print(f"\n6) Hardware Used: {get_hardware_info()}")
-    print(f"7) Batch Size: SimCLR - {simclr_batch_size}, Linear Evaluation - {linear_eval_batch_size}, Fine-tuning - {simclr_batch_size}")
+    print(f"7) Batch Size: SimCLR - {simclr_batch_size}, Linear Evaluation - {linear_eval_batch_size}, Fine-tuning - {config.ft_batch_size}")
     print(f"8) Number of Epochs: SimCLR - {simclr_epochs}, Linear Evaluation - {linear_eval_epochs}, Fine-tuning - {config.ft_epochs}")
     print(f"9) Learning Rate: SimCLR - {config.lr}, Fine-tuning encoder - {config.ft_encoder_lr}, Fine-tuning classifier - {config.ft_classifier_lr}")
     print(f"10) Optimizer: {type(optimizer).__name__}")
@@ -320,7 +321,7 @@ def main():
         for aug_type, data in results.items():
             f.write(f"   {aug_type}: {data['aug_time'] / 60:.2f} minutes\n")
         f.write(f"\n6) Hardware Used: {get_hardware_info()}\n")
-        f.write(f"7) Batch Size: SimCLR - {simclr_batch_size}, Linear Evaluation - {linear_eval_batch_size}\n")
+        f.write(f"7) Batch Size: SimCLR - {simclr_batch_size}, Linear Evaluation - {linear_eval_batch_size}, Fine-tuning - {config.ft_batch_size}\n")
         f.write(f"8) Number of Epochs: SimCLR - {simclr_epochs}, Linear Evaluation - {linear_eval_epochs}, Fine-tuning - {config.ft_epochs}\n")
         f.write(f"9) Learning Rate: SimCLR - {config.lr}, Fine-tuning encoder - {config.ft_encoder_lr}, Fine-tuning classifier - {config.ft_classifier_lr}\n")
         f.write(f"10) Optimizer: {type(optimizer).__name__}\n")

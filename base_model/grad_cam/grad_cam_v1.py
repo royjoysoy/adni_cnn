@@ -7,6 +7,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import skimage.transform as skTrans
+from scipy.ndimage import gaussian_filter
+from skimage import exposure
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
@@ -18,6 +20,18 @@ import sys
 import time
 import datetime as dt
 import SimpleITK as sitk
+
+def standardize_intensity(image):
+    """Standardize image intensity"""
+    p2, p98 = np.percentile(image, (2, 98))
+    image = np.clip(image, p2, p98)
+    image = (image - p2) / (p98 - p2)
+    return image
+
+def enhance_contrast(image):
+    """Enhance image contrast"""
+    from skimage import exposure
+    return exposure.equalize_adapthist(image, clip_limit=0.03)
 
 # Create logs directory if it doesn't exist
 os.makedirs('logs', exist_ok=True)
@@ -53,27 +67,51 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 log_info(f"Using device: {device}")
 
 def register_to_template(moving_image, fixed_template):
-    """Register moving image to template using SimpleITK"""
     try:
+        # Convert to SimpleITK images
+        moving_sitk = sitk.GetImageFromArray(moving_image.astype(np.float32))
+        fixed_sitk = sitk.GetImageFromArray(fixed_template.astype(np.float32))
+        
+        # Set up registration method
         registration_method = sitk.ImageRegistrationMethod()
         
-        # Set up registration parameters
-        registration_method.SetMetricAsMeanSquares()
-        registration_method.SetOptimizerAsGradientDescent(learningRate=1.0, 
-                                                         numberOfIterations=100)
-        registration_method.SetInitialTransform(sitk.TranslationTransform(3))
+        # Multi-resolution setup with more levels
+        registration_method.SetShrinkFactorsPerLevel([16, 8, 4, 2, 1])
+        registration_method.SetSmoothingSigmasPerLevel([4, 3, 2, 1, 0])
         
-        # Perform registration
-        final_transform = registration_method.Execute(sitk.GetImageFromArray(moving_image),
-                                                    sitk.GetImageFromArray(fixed_template))
+        # More robust similarity metric with more samples
+        registration_method.SetMetricAsMattesMutualInformation(numberOfHistogramBins=50)
+        registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
+        registration_method.SetMetricSamplingPercentage(0.2)
         
-        # Apply transform
-        registered_image = sitk.Resample(sitk.GetImageFromArray(moving_image),
-                                       sitk.GetImageFromArray(fixed_template),
-                                       final_transform,
-                                       sitk.sitkLinear)
+        # More conservative optimization parameters
+        registration_method.SetOptimizerAsGradientDescent(
+            learningRate=0.1,
+            numberOfIterations=500,
+            convergenceMinimumValue=1e-8,
+            convergenceWindowSize=20
+        )
+        
+        # Use affine transform instead of similarity
+        transform = sitk.AffineTransform(3)
+        registration_method.SetInitialTransform(transform)
+        registration_method.SetInterpolator(sitk.sitkBSpline)
+        
+        # Execute registration
+        final_transform = registration_method.Execute(fixed_sitk, moving_sitk)
+        
+        # Apply transform with B-spline interpolation
+        registered_image = sitk.Resample(
+            moving_sitk,
+            fixed_sitk,
+            final_transform,
+            sitk.sitkBSpline,
+            0.0,
+            moving_sitk.GetPixelID()
+        )
         
         return sitk.GetArrayFromImage(registered_image)
+        
     except Exception as e:
         logging.error(f"Registration failed: {str(e)}")
         return moving_image
@@ -212,6 +250,7 @@ class GradCAM:
         finally:
             input_image.requires_grad = original_requires_grad
 
+
 def save_gradcam_visualization(model, image, label, save_path, template_path=None):
     try:
         # Generate GradCAM
@@ -235,33 +274,52 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
         image_np = image[0].cpu().numpy()
         image_np = (image_np - image_np.min()) / (image_np.max() - image_np.min())
         
+        
         # Load and preprocess template
         if template_path and os.path.exists(template_path):
             try:
+                # Load template and original image
                 template_img = nib.load(template_path)
-                template = template_img.get_fdata()
+                template_data = template_img.get_fdata().astype(np.float32)
+        
+                # Ensure consistent orientation
+                template_canonical = nib.as_closest_canonical(template_img)
+                template_data = template_canonical.get_fdata().astype(np.float32)
                 
-                if template.ndim != 3:
-                    raise ValueError(f"Template should be 3D, got {template.ndim}D")
+                # Center align the template
+                template_data = skTrans.resize(template_data, (256, 256, 256), preserve_range=True)
+                center_coords = np.array(template_data.shape) // 2
+                window_size = 128
+                template_data = template_data[
+                    center_coords[0]-window_size:center_coords[0]+window_size,
+                    center_coords[1]-window_size:center_coords[1]+window_size,
+                    center_coords[2]-window_size:center_coords[2]+window_size
+                ]
                 
-                # Get orientation and ensure consistency
-                template_orientation = nib.aff2axcodes(template_img.affine)
-                template = nib.as_closest_canonical(template_img).get_fdata()
+                # Resize to target dimensions
+                template_resized = skTrans.resize(template_data, (64, 64, 64), 
+                                                order=3, preserve_range=True,
+                                                anti_aliasing=True)
                 
-                # Single resize operation
-                template = skTrans.resize(template, (64, 64, 64), order=1, preserve_range=True)
+                # Standardize intensities
+                template_norm = standardize_intensity(template_resized)
+                image_norm = standardize_intensity(image_np)
                 
-                # Register template to input image
-                template = register_to_template(template, image_np)
+                # Register normalized images
+                template = register_to_template(template_norm, image_norm)
                 
-                # Robust normalization
+                # Post-processing
+                template = enhance_contrast(template)
+                template = gaussian_filter(template, sigma=0.5)
+                
+                # Final normalization
                 p1, p99 = np.percentile(template, (1, 99))
                 template = np.clip(template, p1, p99)
                 template = (template - template.min()) / (template.max() - template.min())
-                
+                    
                 if np.isnan(template).any() or np.isinf(template).any():
                     raise ValueError("Template contains NaN or Inf values")
-                    
+                        
             except Exception as e:
                 logging.error(f"Error processing template: {str(e)}")
                 template = image_np

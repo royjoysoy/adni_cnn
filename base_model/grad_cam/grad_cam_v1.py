@@ -17,6 +17,7 @@ from datetime import datetime
 import sys
 import time
 import datetime as dt
+import SimpleITK as sitk
 
 # Create logs directory if it doesn't exist
 os.makedirs('logs', exist_ok=True)
@@ -45,12 +46,37 @@ TEMPLATE_PATH = "/home/simclr_project/simclr/SimCLR_RS/templates/mni305.cor.mgz"
 if not os.path.exists(TEMPLATE_PATH):
     raise FileNotFoundError(f"Template not found at {TEMPLATE_PATH}")
     
-# Now we can safely use log_info
 log_info(f"Using template from: {TEMPLATE_PATH}")
 
 # Device configuration
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 log_info(f"Using device: {device}")
+
+def register_to_template(moving_image, fixed_template):
+    """Register moving image to template using SimpleITK"""
+    try:
+        registration_method = sitk.ImageRegistrationMethod()
+        
+        # Set up registration parameters
+        registration_method.SetMetricAsMeanSquares()
+        registration_method.SetOptimizerAsGradientDescent(learningRate=1.0, 
+                                                         numberOfIterations=100)
+        registration_method.SetInitialTransform(sitk.TranslationTransform(3))
+        
+        # Perform registration
+        final_transform = registration_method.Execute(sitk.GetImageFromArray(moving_image),
+                                                    sitk.GetImageFromArray(fixed_template))
+        
+        # Apply transform
+        registered_image = sitk.Resample(sitk.GetImageFromArray(moving_image),
+                                       sitk.GetImageFromArray(fixed_template),
+                                       final_transform,
+                                       sitk.sitkLinear)
+        
+        return sitk.GetArrayFromImage(registered_image)
+    except Exception as e:
+        logging.error(f"Registration failed: {str(e)}")
+        return moving_image
 
 class CustomImageDataset(Dataset):
     def __init__(self, data_df):
@@ -140,58 +166,42 @@ class GradCAM:
         self.model = model
         
     def generate_cam(self, input_image, target_class=None):
-    # 기존 텐서의 requires_grad 상태를 저장
         original_requires_grad = input_image.requires_grad
     
         try:
-            # gradient 활성화
             input_image.requires_grad = True
-            
-            # Set model to eval mode but enable gradients
             self.model.eval()
             
-            # Forward pass
             output = self.model(input_image)
             
             if target_class is None:
                 target_class = output.argmax(dim=1)
             
-            # Zero all existing gradients
             self.model.zero_grad()
-            
-            # Get model output for target class
             target_output = output[0, target_class]
-            
-            # Backward pass
             target_output.backward()
         
-            # Get gradients and activations
             gradients = self.model.get_activations_gradient()
             activations = self.model.get_activations()
         
             if gradients is None or activations is None:
                 return None
         
-            # Calculate weights
             weights = torch.mean(gradients, dim=(2, 3, 4))[0]
-        
-            # Generate CAM
             cam = torch.zeros(activations.shape[2:], dtype=torch.float32).to(device)
+            
             for i, w in enumerate(weights):
                 cam += w * activations[0, i, :, :, :]
         
-            # Apply ReLU and normalize
             cam = F.relu(cam)
             cam = cam - cam.min()
-            cam = cam / (cam.max() + 1e-7)  # Added small epsilon to prevent division by zero
-        
-            # CPU로 이동하고 numpy로 변환
+            cam = cam / (cam.max() + 1e-7)
+            
             cam = cam.cpu().detach().numpy()
-        
-            # 메모리 정리
+            
             del gradients
             del activations
-            torch.cuda.empty_cache()  # GPU 메모리 정리
+            torch.cuda.empty_cache()
         
             return cam
         
@@ -200,12 +210,11 @@ class GradCAM:
             return None
         
         finally:
-            # 원래 상태로 복구
             input_image.requires_grad = original_requires_grad
 
 def save_gradcam_visualization(model, image, label, save_path, template_path=None):
     try:
-        # Generate GradCAM first
+        # Generate GradCAM
         gradcam = GradCAM(model)
         cam = gradcam.generate_cam(image.unsqueeze(0).to(device))
         
@@ -213,41 +222,56 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
             logging.warning(f"Failed to generate GradCAM for {save_path}")
             return
         
-        # Resize CAM to 64x64x64 for finer visualization
+        # Resize CAM
         cam = torch.tensor(cam).to(device)
         cam = F.interpolate(
             cam.unsqueeze(0).unsqueeze(0),
-            size=(64, 64, 64),  # Interpolate to full image size
+            size=(64, 64, 64),
             mode='trilinear',
             align_corners=False
         ).squeeze().cpu().numpy()
         
-        # Convert image to numpy and normalize for visualization
+        # Process input image
         image_np = image[0].cpu().numpy()
         image_np = (image_np - image_np.min()) / (image_np.max() - image_np.min())
         
-        # Load and preprocess template (only once)
+        # Load and preprocess template
         if template_path and os.path.exists(template_path):
-            template = nib.load(template_path).get_fdata()
-            
-            # Crop template to match your preprocessing (173 x 199 x 215)
-            template = template[:173, :199, :215]
-            
-            # Resize to 64x64x64 to match your data
-            template = skTrans.resize(template, (64, 64, 64), order=1, preserve_range=True)
-            
-            # Normalize template
-            template = (template - template.min()) / (template.max() - template.min())
+            try:
+                template_img = nib.load(template_path)
+                template = template_img.get_fdata()
+                
+                if template.ndim != 3:
+                    raise ValueError(f"Template should be 3D, got {template.ndim}D")
+                
+                # Get orientation and ensure consistency
+                template_orientation = nib.aff2axcodes(template_img.affine)
+                template = nib.as_closest_canonical(template_img).get_fdata()
+                
+                # Single resize operation
+                template = skTrans.resize(template, (64, 64, 64), order=1, preserve_range=True)
+                
+                # Register template to input image
+                template = register_to_template(template, image_np)
+                
+                # Robust normalization
+                p1, p99 = np.percentile(template, (1, 99))
+                template = np.clip(template, p1, p99)
+                template = (template - template.min()) / (template.max() - template.min())
+                
+                if np.isnan(template).any() or np.isinf(template).any():
+                    raise ValueError("Template contains NaN or Inf values")
+                    
+            except Exception as e:
+                logging.error(f"Error processing template: {str(e)}")
+                template = image_np
         else:
-            template = image_np  # Use original image if no template
+            template = image_np
             
-        # Create figure with four columns
+        # Create visualization
         fig, axes = plt.subplots(3, 4, figsize=(20, 15))
-        
-        # Define slice views
         views = ['Sagittal', 'Coronal', 'Axial']
         
-        # Get middle slices for each view
         for i, view in enumerate(views):
             if view == 'Sagittal':
                 img_slice = image_np[:, :, image_np.shape[2]//2]
@@ -262,22 +286,19 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
                 cam_slice = cam[cam.shape[0]//2, :, :]
                 temp_slice = template[template.shape[0]//2, :, :]
             
-            # Original image
+            # Plot slices
             axes[i,0].imshow(img_slice, cmap='gray')
             axes[i,0].set_title(f'{view} - Original')
             axes[i,0].axis('off')
             
-            # Template
             axes[i,1].imshow(temp_slice, cmap='gray')
             axes[i,1].set_title(f'{view} - Template')
             axes[i,1].axis('off')
             
-            # GradCAM
             axes[i,2].imshow(cam_slice, cmap='jet')
             axes[i,2].set_title(f'{view} - GradCAM')
             axes[i,2].axis('off')
             
-            # Overlay on template
             axes[i,3].imshow(temp_slice, cmap='gray')
             axes[i,3].imshow(cam_slice, cmap='jet', alpha=0.6)
             axes[i,3].set_title(f'{view} - Template + GradCAM')
@@ -291,55 +312,8 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
     except Exception as e:
         logging.error(f"Error in saving GradCAM visualization: {str(e)}")
 
-def validate(dataloader, model, criterion, device, epoch):
-    model.eval()
-    val_loss = 0
-    correct = 0
-    all_labels = []
-    all_preds = []
-    total_processed = 0  # 추가: 실제로 처리된 배치 수 tracking
-    
-    os.makedirs(f'logs/gradcam_epoch_{epoch}', exist_ok=True)
-    
-    with torch.set_grad_enabled(True):
-        for batch_idx, (img, label) in enumerate(dataloader):
-            try:
-                img, label = img.to(device), label.to(device)
-                output = model(img)
-                
-                val_loss += criterion(output, label).item()
-                correct += (output.argmax(1) == label.argmax(1)).type(torch.float).sum().item()
-                
-                all_labels.extend(label.argmax(1).cpu().numpy())
-                all_preds.extend(output.argmax(1).cpu().numpy())
-                
-                total_processed += 1  # 성공적으로 처리된 배치 카운트
-                
-                if batch_idx % 5 == 0:
-                    save_gradcam_visualization(
-                        model, 
-                        img[0],
-                        label[0],
-                        f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}.png',
-                        template_path=TEMPLATE_PATH  # Add this line with your actual template path
-                    )
-            except Exception as e:
-                logging.error(f"Error during validation batch {batch_idx}: {str(e)}")
-                continue
-    
-    # 실제 처리된 배치 수로 나누기
-    if total_processed > 0:  # 0으로 나누기 방지
-        val_loss /= total_processed
-        accuracy = 100 * correct / (total_processed * dataloader.batch_size)
-    else:
-        val_loss = float('inf')
-        accuracy = 0.0
-        logging.error("No batches were successfully processed during validation")
-    
-    return val_loss, accuracy, all_labels, all_preds
-
 def kms_train_loop(model, train_loader, optimizer, loss_fn, device):
-    """KMS training loop function"""
+    """Training loop function"""
     model.train()
     total_loss = 0
     total_correct = 0
@@ -357,7 +331,6 @@ def kms_train_loop(model, train_loader, optimizer, loss_fn, device):
         target_idx = target.argmax(dim=1, keepdim=True)
         correct = pred.eq(target_idx).sum().item()
         
-        # Accumulate metrics
         total_loss += loss.item()
         total_correct += correct
         total_samples += len(data)
@@ -367,13 +340,60 @@ def kms_train_loop(model, train_loader, optimizer, loss_fn, device):
             log_info(f'Train Batch [{batch_idx}/{len(train_loader)}] '
                     f'Loss: {loss.item():.6f} Acc: {batch_acc:.2f}%')
     
-    # Calculate final metrics
     avg_loss = total_loss / len(train_loader)
     avg_acc = (total_correct / total_samples) * 100
     
     return avg_loss, avg_acc
 
+def validate(dataloader, model, criterion, device, epoch):
+    """Validation function with GradCAM visualization"""
+    model.eval()
+    val_loss = 0
+    correct = 0
+    all_labels = []
+    all_preds = []
+    total_processed = 0
+    
+    os.makedirs(f'logs/gradcam_epoch_{epoch}', exist_ok=True)
+    
+    with torch.set_grad_enabled(True):
+        for batch_idx, (img, label) in enumerate(dataloader):
+            try:
+                img, label = img.to(device), label.to(device)
+                output = model(img)
+                
+                val_loss += criterion(output, label).item()
+                correct += (output.argmax(1) == label.argmax(1)).type(torch.float).sum().item()
+                
+                all_labels.extend(label.argmax(1).cpu().numpy())
+                all_preds.extend(output.argmax(1).cpu().numpy())
+                
+                total_processed += 1
+                
+                if batch_idx % 5 == 0:
+                    save_gradcam_visualization(
+                        model, 
+                        img[0],
+                        label[0],
+                        f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}.png',
+                        template_path=TEMPLATE_PATH
+                    )
+            except Exception as e:
+                logging.error(f"Error during validation batch {batch_idx}: {str(e)}")
+                continue
+    
+    if total_processed > 0:
+        val_loss /= total_processed
+        accuracy = 100 * correct / (total_processed * dataloader.batch_size)
+    else:
+        val_loss = float('inf')
+        accuracy = 0.0
+        logging.error("No batches were successfully processed during validation")
+    
+    return val_loss, accuracy, all_labels, all_preds
+
 def main():
+    """Main training function"""
     # Load and prepare data
     log_info("\nLoading data...")
     df = pd.read_csv('/home/simclr_project/simclr/SimCLR_RS/df_modified.csv')
@@ -422,12 +442,13 @@ def main():
             log_info("-" * 20)
             
             try:
-                # Training phase using kms_train_loop
+                # Training phase
                 train_loss, train_acc = kms_train_loop(model, train_loader, optimizer, criterion, device)
                     
                 # Validation phase with GradCAM
                 val_loss, val_acc, labels, preds = validate(val_loader, model, criterion, device, epoch)
                 
+                # Record metrics
                 train_losses.append(train_loss)
                 train_accuracies.append(train_acc)
                 val_losses.append(val_loss)
@@ -435,6 +456,7 @@ def main():
             
                 epoch_duration = datetime.now() - epoch_start_time
             
+                # Log epoch summary
                 log_info(f"\nEpoch {epoch+1} Summary:")
                 log_info(f"Train Loss: {train_loss:.4f}")
                 log_info(f"Train Accuracy: {train_acc:.2f}")
@@ -447,9 +469,8 @@ def main():
                     try:
                         cm = confusion_matrix(labels, preds)
                         plt.figure(figsize=(8, 6))
-                        # Add these parameters to sns.heatmap
                         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                                    yticklabels=sorted(range(3), reverse=True))  # This will reverse the y-axis labels
+                                  yticklabels=sorted(range(3), reverse=True))
                         plt.title(f'Confusion Matrix - Epoch {epoch+1}')
                         plt.ylabel('True Label')
                         plt.xlabel('Predicted Label')
@@ -460,9 +481,9 @@ def main():
 
             except Exception as e:
                 log_info(f"\nError during epoch {epoch+1}: {str(e)}")
-                continue  # Skip to next epoch if current one fails
+                continue
             
-        # Save model
+        # Save final model
         torch.save(model.state_dict(), 'logs/adni_model.pt')
         
         # Create and save training history plots

@@ -22,12 +22,31 @@ import datetime as dt
 import SimpleITK as sitk
 
 def standardize_intensity(image):
-    """Standardize image intensity to [-1,1] range"""
+    """
+    Standardize image intensity to [-1,1] range with robust normalization
+    """
+    # Handle empty or invalid images
+    if image is None or image.size == 0:
+        return np.zeros_like(image)
+        
+    # Make a copy to avoid modifying the original
+    image = image.copy()
+    
+    # Remove outliers
     p2, p98 = np.percentile(image, (2, 98))
     image = np.clip(image, p2, p98)
-    image = (image - p2) / (p98 - p2)  
+    
+    # Normalize to [0,1] first
+    image_min = image.min()
+    image_max = image.max()
+    if image_max - image_min != 0:
+        image = (image - image_min) / (image_max - image_min)
+    
+    # Then scale to [-1,1]
     image = (image * 2) - 1
-    return image
+    
+    # Ensure the output is strictly within [-1,1]
+    return np.clip(image, -1, 1)
 
 def enhance_contrast(image):
     """Enhance image contrast"""
@@ -254,7 +273,6 @@ class GradCAM:
 
 def save_gradcam_visualization(model, image, label, save_path, template_path=None):
     try:
-        # Clear any existing plots and CUDA cache
         plt.close('all')
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -267,7 +285,7 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
             logging.warning(f"Failed to generate GradCAM for {save_path}")
             return
         
-        # Resize CAM
+        # Resize CAM to match input size
         cam = torch.tensor(cam).to(device)
         cam = F.interpolate(
             cam.unsqueeze(0).unsqueeze(0),
@@ -278,113 +296,129 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
         
         # Process input image
         image_np = image[0].cpu().numpy()
-        image_np = (image_np - image_np.min()) / (image_np.max() - image_np.min())
-        
-        # Template processing with enhanced error handling
-        template = image_np  # Default fallback
+
+        # Template processing
+        template = None
         if template_path and os.path.exists(template_path):
             try:
-                # Load template and original image
                 template_img = nib.load(template_path)
                 template_data = template_img.get_fdata().astype(np.float32)
-        
-                # Ensure consistent orientation
-                template_canonical = nib.as_closest_canonical(template_img)
-                template_data = template_canonical.get_fdata().astype(np.float32)
                 
-                # Center align the template
-                template_data = skTrans.resize(template_data, (256, 256, 256), preserve_range=True)
-                center_coords = np.array(template_data.shape) // 2
-                window_size = 128
-                template_data = template_data[
-                    center_coords[0]-window_size:center_coords[0]+window_size,
-                    center_coords[1]-window_size:center_coords[1]+window_size,
-                    center_coords[2]-window_size:center_coords[2]+window_size
-                ]
+                # Resize template to exactly match input dimensions
+                template_data = skTrans.resize(
+                    template_data,
+                    image_np.shape,
+                    order=3,
+                    preserve_range=True,
+                    anti_aliasing=True,
+                    mode='constant'
+                )
                 
-                # Resize to target dimensions
-                template_resized = skTrans.resize(template_data, (64, 64, 64), 
-                                                order=3, preserve_range=True,
-                                                anti_aliasing=True)
+                # Normalize template
+                p1, p99 = np.percentile(template_data, (1, 99))
+                template_data = np.clip(template_data, p1, p99)
+                template = (template_data - template_data.min()) / (template_data.max() - template_data.min())
                 
-                # Standardize intensities with range checks
-                template_norm = standardize_intensity(template_resized)
-                image_norm = standardize_intensity(image_np)
-
-                if np.any(template_norm < -1) or np.any(template_norm > 1):
-                    logging.warning("Template normalization produced values outside [-1,1]")
-                    template_norm = np.clip(template_norm, -1, 1)
-
-                if np.any(image_norm < -1) or np.any(image_norm > 1):
-                    logging.warning("Image normalization produced values outside [-1,1]")
-                    image_norm = np.clip(image_norm, -1, 1)
-                
-                # Registration with validation
-                template = register_to_template(template_norm, image_norm)
-                
-                if np.isnan(template).any() or np.isinf(template).any():
-                    logging.warning("Registration produced invalid values, falling back to original template")
-                    template = template_norm
-                else:
-                    # Post-processing
-                    template = enhance_contrast(template)
-                    template = gaussian_filter(template, sigma=0.5)
-                    
-                    # Final normalization with safety checks
-                    if np.isnan(template).any() or np.isinf(template).any():
-                        logging.warning("Post-processing produced invalid values, using fallback")
-                        template = image_np
-                    else:
-                        p1, p99 = np.percentile(template, (1, 99))
-                        template = np.clip(template, p1, p99)
-                        template = (template - template.min()) / (template.max() - template.min())
-                        
             except Exception as e:
-                logging.error(f"Error processing template: {str(e)}")
-                template = image_np
+                logging.error(f"Template processing failed: {str(e)}")
+                template = None
+        
+        if template is None:
+            template = standardize_intensity(image_np)
             
         # Create visualization
         fig, axes = plt.subplots(3, 4, figsize=(20, 15))
-        views = ['Sagittal', 'Coronal', 'Axial']
         
-        for i, view in enumerate(views):
-            if view == 'Sagittal':
-                img_slice = image_np[:, :, image_np.shape[2]//2]
-                cam_slice = cam[:, :, cam.shape[2]//2]
-                temp_slice = template[:, :, template.shape[2]//2]
-            elif view == 'Coronal':
-                img_slice = image_np[:, image_np.shape[1]//2, :]
-                cam_slice = cam[:, cam.shape[1]//2, :]
-                temp_slice = template[:, template.shape[1]//2, :]
-            else:  # Axial
-                img_slice = image_np[image_np.shape[0]//2, :, :]
-                cam_slice = cam[cam.shape[0]//2, :, :]
-                temp_slice = template[template.shape[0]//2, :, :]
-            
-            axes[i,0].imshow(img_slice, cmap='gray')
-            axes[i,0].set_title(f'{view} - Original')
-            axes[i,0].axis('off')
-            
-            axes[i,1].imshow(temp_slice, cmap='gray')
-            axes[i,1].set_title(f'{view} - Template')
-            axes[i,1].axis('off')
-            
-            axes[i,2].imshow(cam_slice, cmap='jet')
-            axes[i,2].set_title(f'{view} - GradCAM')
-            axes[i,2].axis('off')
-            
-            axes[i,3].imshow(temp_slice, cmap='gray')
-            axes[i,3].imshow(cam_slice, cmap='jet', alpha=0.6)
-            axes[i,3].set_title(f'{view} - Template + GradCAM')
-            axes[i,3].axis('off')
+        # Get middle slices
+        mid_x = template.shape[0] // 2
+        mid_y = template.shape[1] // 2
+        mid_z = template.shape[2] // 2
+        
+        # Row 1: Sagittal view
+        img_slice = np.rot90(image_np[mid_x, :, :], k=-1)
+        cam_slice = np.rot90(cam[mid_x, :, :], k=-1)
+        temp_slice = np.rot90(template[mid_x, :, :], k=-1)
+        
+        extent = [0, img_slice.shape[1], 0, img_slice.shape[0]]
+        
+        axes[0,0].imshow(img_slice, cmap='gray', extent=extent)
+        axes[0,0].set_title('Sagittal - Original')
+        axes[0,0].axis('off')
+        
+        axes[0,1].imshow(temp_slice, cmap='gray', extent=extent)
+        axes[0,1].set_title('Sagittal - Template')
+        axes[0,1].axis('off')
+        
+        axes[0,2].imshow(cam_slice, cmap='jet', extent=extent)
+        axes[0,2].set_title('Sagittal - GradCAM')
+        axes[0,2].axis('off')
+        
+        axes[0,3].imshow(temp_slice, cmap='gray', extent=extent)
+        axes[0,3].imshow(cam_slice, cmap='jet', alpha=0.7, extent=extent)
+        axes[0,3].set_title('Sagittal - Template + GradCAM')
+        axes[0,3].axis('off')
+        
+        # Row 2: Coronal view
+        img_slice = np.rot90(image_np[:, mid_y, :], k=-1)
+        cam_slice = np.rot90(cam[:, mid_y, :], k=-1)
+        temp_slice = np.rot90(template[:, mid_y, :], k=-1)
+        
+        extent = [0, img_slice.shape[1], 0, img_slice.shape[0]]
+        
+        axes[1,0].imshow(img_slice, cmap='gray', extent=extent)
+        axes[1,0].set_title('Coronal - Original')
+        axes[1,0].axis('off')
+        
+        axes[1,1].imshow(temp_slice, cmap='gray', extent=extent)
+        axes[1,1].set_title('Coronal - Template')
+        axes[1,1].axis('off')
+        
+        axes[1,2].imshow(cam_slice, cmap='jet', extent=extent)
+        axes[1,2].set_title('Coronal - GradCAM')
+        axes[1,2].axis('off')
+        
+        axes[1,3].imshow(temp_slice, cmap='gray', extent=extent)
+        axes[1,3].imshow(cam_slice, cmap='jet', alpha=0.7, extent=extent)
+        axes[1,3].set_title('Coronal - Template + GradCAM')
+        axes[1,3].axis('off')
+        
+        # Row 3: Axial view
+        img_slice = np.flipud(image_np[:, :, mid_z])
+        cam_slice = np.flipud(cam[:, :, mid_z])
+        temp_slice = np.flipud(template[:, :, mid_z])
+        
+        extent = [0, img_slice.shape[1], 0, img_slice.shape[0]]
+        
+        axes[2,0].imshow(img_slice, cmap='gray', extent=extent)
+        axes[2,0].set_title('Axial - Original')
+        axes[2,0].axis('off')
+        
+        axes[2,1].imshow(temp_slice, cmap='gray', extent=extent)
+        axes[2,1].set_title('Axial - Template')
+        axes[2,1].axis('off')
+        
+        axes[2,2].imshow(cam_slice, cmap='jet', extent=extent)
+        axes[2,2].set_title('Axial - GradCAM')
+        axes[2,2].axis('off')
+        
+        axes[2,3].imshow(temp_slice, cmap='gray', extent=extent)
+        axes[2,3].imshow(cam_slice, cmap='jet', alpha=0.7, extent=extent)
+        axes[2,3].set_title('Axial - Template + GradCAM')
+        axes[2,3].axis('off')
         
         plt.suptitle(f'GradCAM Visualization (Class {label.argmax().item()})')
         plt.tight_layout()
-        plt.savefig(save_path)
+        plt.savefig(save_path, bbox_inches='tight', pad_inches=0.1)
         plt.close()
         
     except Exception as e:
         logging.error(f"Error in saving GradCAM visualization: {str(e)}")
+        plt.close('all')
+        
+    finally:
+        plt.close('all')
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 def kms_train_loop(model, train_loader, optimizer, loss_fn, device):
     """Training loop function"""

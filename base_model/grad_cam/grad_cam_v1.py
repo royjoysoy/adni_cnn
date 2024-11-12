@@ -22,21 +22,21 @@ import datetime as dt
 import SimpleITK as sitk
 
 def standardize_intensity(image):
-    """Standardize image intensity"""
+    """Standardize image intensity to [-1,1] range"""
     p2, p98 = np.percentile(image, (2, 98))
     image = np.clip(image, p2, p98)
-    image = (image - p2) / (p98 - p2)
+    image = (image - p2) / (p98 - p2)  
+    image = (image * 2) - 1
     return image
 
 def enhance_contrast(image):
     """Enhance image contrast"""
-    from skimage import exposure
     return exposure.equalize_adapthist(image, clip_limit=0.03)
 
 # Create logs directory if it doesn't exist
 os.makedirs('logs', exist_ok=True)
 
-# Set up logging first
+# Set up logging
 current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
 log_filename = f'logs/training_log_{current_time}.log'
 
@@ -72,19 +72,27 @@ def register_to_template(moving_image, fixed_template):
         moving_sitk = sitk.GetImageFromArray(moving_image.astype(np.float32))
         fixed_sitk = sitk.GetImageFromArray(fixed_template.astype(np.float32))
         
+        # Initialize transform once
+        transform = sitk.AffineTransform(3)
+        initial_transform = sitk.CenteredTransformInitializer(
+            fixed_sitk, 
+            moving_sitk,
+            transform,
+            sitk.CenteredTransformInitializerFilter.GEOMETRY
+        )
+        
         # Set up registration method
         registration_method = sitk.ImageRegistrationMethod()
-        
+        registration_method.SetInitialTransform(initial_transform)
+    
         # Multi-resolution setup with more levels
         registration_method.SetShrinkFactorsPerLevel([16, 8, 4, 2, 1])
         registration_method.SetSmoothingSigmasPerLevel([4, 3, 2, 1, 0])
         
-        # More robust similarity metric with more samples
         registration_method.SetMetricAsMattesMutualInformation(numberOfHistogramBins=50)
         registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
         registration_method.SetMetricSamplingPercentage(0.2)
         
-        # More conservative optimization parameters
         registration_method.SetOptimizerAsGradientDescent(
             learningRate=0.1,
             numberOfIterations=500,
@@ -92,15 +100,10 @@ def register_to_template(moving_image, fixed_template):
             convergenceWindowSize=20
         )
         
-        # Use affine transform instead of similarity
-        transform = sitk.AffineTransform(3)
-        registration_method.SetInitialTransform(transform)
-        registration_method.SetInterpolator(sitk.sitkBSpline)
-        
         # Execute registration
         final_transform = registration_method.Execute(fixed_sitk, moving_sitk)
         
-        # Apply transform with B-spline interpolation
+        # Apply transform
         registered_image = sitk.Resample(
             moving_sitk,
             fixed_sitk,
@@ -182,7 +185,6 @@ class Custom3DCNN(nn.Module):
         x = self.bn3(x)
         x = self.relu3(x)
         
-        # Store activations for GradCAM
         self.activations = x
         if x.requires_grad:
             x.register_hook(self.activations_hook)
@@ -250,9 +252,13 @@ class GradCAM:
         finally:
             input_image.requires_grad = original_requires_grad
 
-
 def save_gradcam_visualization(model, image, label, save_path, template_path=None):
     try:
+        # Clear any existing plots and CUDA cache
+        plt.close('all')
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            
         # Generate GradCAM
         gradcam = GradCAM(model)
         cam = gradcam.generate_cam(image.unsqueeze(0).to(device))
@@ -274,8 +280,8 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
         image_np = image[0].cpu().numpy()
         image_np = (image_np - image_np.min()) / (image_np.max() - image_np.min())
         
-        
-        # Load and preprocess template
+        # Template processing with enhanced error handling
+        template = image_np  # Default fallback
         if template_path and os.path.exists(template_path):
             try:
                 # Load template and original image
@@ -301,30 +307,41 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
                                                 order=3, preserve_range=True,
                                                 anti_aliasing=True)
                 
-                # Standardize intensities
+                # Standardize intensities with range checks
                 template_norm = standardize_intensity(template_resized)
                 image_norm = standardize_intensity(image_np)
+
+                if np.any(template_norm < -1) or np.any(template_norm > 1):
+                    logging.warning("Template normalization produced values outside [-1,1]")
+                    template_norm = np.clip(template_norm, -1, 1)
+
+                if np.any(image_norm < -1) or np.any(image_norm > 1):
+                    logging.warning("Image normalization produced values outside [-1,1]")
+                    image_norm = np.clip(image_norm, -1, 1)
                 
-                # Register normalized images
+                # Registration with validation
                 template = register_to_template(template_norm, image_norm)
                 
-                # Post-processing
-                template = enhance_contrast(template)
-                template = gaussian_filter(template, sigma=0.5)
-                
-                # Final normalization
-                p1, p99 = np.percentile(template, (1, 99))
-                template = np.clip(template, p1, p99)
-                template = (template - template.min()) / (template.max() - template.min())
-                    
                 if np.isnan(template).any() or np.isinf(template).any():
-                    raise ValueError("Template contains NaN or Inf values")
+                    logging.warning("Registration produced invalid values, falling back to original template")
+                    template = template_norm
+                else:
+                    # Post-processing
+                    template = enhance_contrast(template)
+                    template = gaussian_filter(template, sigma=0.5)
+                    
+                    # Final normalization with safety checks
+                    if np.isnan(template).any() or np.isinf(template).any():
+                        logging.warning("Post-processing produced invalid values, using fallback")
+                        template = image_np
+                    else:
+                        p1, p99 = np.percentile(template, (1, 99))
+                        template = np.clip(template, p1, p99)
+                        template = (template - template.min()) / (template.max() - template.min())
                         
             except Exception as e:
                 logging.error(f"Error processing template: {str(e)}")
                 template = image_np
-        else:
-            template = image_np
             
         # Create visualization
         fig, axes = plt.subplots(3, 4, figsize=(20, 15))
@@ -344,7 +361,6 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
                 cam_slice = cam[cam.shape[0]//2, :, :]
                 temp_slice = template[template.shape[0]//2, :, :]
             
-            # Plot slices
             axes[i,0].imshow(img_slice, cmap='gray')
             axes[i,0].set_title(f'{view} - Original')
             axes[i,0].axis('off')

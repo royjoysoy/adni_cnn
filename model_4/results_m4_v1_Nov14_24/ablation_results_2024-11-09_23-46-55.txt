@@ -1,0 +1,14 @@
+base: Avg Loss: nan, Avg Val Accuracy: 37.04%
+flip: Avg Loss: nan, Avg Val Accuracy: 36.32%
+anisotropy: Avg Loss: nan, Avg Val Accuracy: 36.23%
+swap: Avg Loss: nan, Avg Val Accuracy: 34.34%
+elastic: Avg Loss: nan, Avg Val Accuracy: 36.03%
+bias_field: Avg Loss: nan, Avg Val Accuracy: 36.88%
+blur: Avg Loss: nan, Avg Val Accuracy: 35.54%
+gamma: Avg Loss: nan, Avg Val Accuracy: 35.41%
+spike: Avg Loss: nan, Avg Val Accuracy: 35.85%
+ghost: Avg Loss: nan, Avg Val Accuracy: 36.29%
+noise: Avg Loss: nan, Avg Val Accuracy: 36.05%
+motion: Avg Loss: nan, Avg Val Accuracy: 36.00%
+mixup: Avg Loss: nan, Avg Val Accuracy: 35.72%
+cutmix: Avg Loss: nan, Avg Val Accuracy: 35.95%

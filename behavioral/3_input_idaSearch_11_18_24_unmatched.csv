@@ -1,0 +1,89 @@
+Subject ID,Project,Phase,Sex,Weight,Research Group,APOE A1,APOE A2,Visit,Study Date,Archive Date,Age,Global CDR,NPI-Q Total Score,MMSE Total Score,GDSCALE Total Score,FAQ Total Score,Modality,Description,Imaging Protocol,Image ID,Unmatched_Image_ID,Structure,Laterality,Image Type,Registration,Tissue
+010_S_0419,ADNI,ADNI 1,M,79.7,CN,2,2,ADNI1/GO Month 6,12/15/06,10/1/08,70.9,0,1,29,,0,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118705,118705,Brain,Both,image volume,native,All
+010_S_0419,ADNI,ADNI 1,M,80.2,CN,2,2,ADNI1/GO Month 12,6/27/07,9/10/07,71.4,0,0,30,0,0,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,72162,72162,Brain,Both,image volume,native,All
+010_S_0419,ADNI,ADNI 1,M,74.4,CN,2,2,ADNI1/GO Month 24,6/20/08,1/5/10,72.4,0,1,30,0,0,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,162073,162073,Brain,Both,image volume,native,All
+010_S_0419,ADNI,ADNI 1,M,75.8,CN,2,2,ADNI1/GO Month 36,6/23/09,10/1/09,73.4,0,0,27,0,0,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,155919,155919,Brain,Both,image volume,native,All
+010_S_0422,ADNI,ADNI 1,M,103.4,MCI,3,3,ADNI Screening,11/30/06,10/1/08,62.2,0.5,,29,1,,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118703,118703,Brain,Both,image volume,native,All
+010_S_0422,ADNI,ADNI 1,M,106.7,MCI,3,3,ADNI1/GO Month 6,3/27/07,10/1/08,62.5,0.5,6,29,,1,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118710,118710,Brain,Both,image volume,native,All
+010_S_0422,ADNI,ADNI 1,M,103.9,MCI,3,3,ADNI1/GO Month 12,9/28/07,10/27/07,63,0.5,5,30,1,3,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,78765,78765,Brain,Both,image volume,native,All
+010_S_0422,ADNI,ADNI 1,M,105.7,MCI,3,3,ADNI1/GO Month 18,3/27/08,4/14/08,63.5,0.5,2,30,,2,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,102459,102459,Brain,Both,image volume,native,All
+010_S_0422,ADNI,ADNI 1,M,102.1,MCI,3,3,ADNI1/GO Month 24,9/26/08,10/27/08,64,0.5,0,29,1,2,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,124040,124040,Brain,Both,image volume,native,All
+010_S_0786,ADNI,ADNI 1,M,88.7,AD,3,3,ADNI Screening,9/27/06,10/2/08,74.7,1,,26,3,,MRI,MPR; ; N3; Scaled_2 <- MPRAGE SENS,,118990,118990,Brain,Both,image volume,native,All
+010_S_0786,ADNI,ADNI 1,M,87,AD,3,3,ADNI1/GO Month 6,5/4/07,9/10/07,75.3,1,9,27,,21,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,72372,72372,Brain,Both,image volume,native,All
+010_S_0786,ADNI,ADNI 1,M,88.4,AD,3,3,ADNI1/GO Month 12,10/10/07,10/27/07,75.7,1,13,24,7,23,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,78770,78770,Brain,Both,image volume,native,All
+010_S_0786,ADNI,ADNI 1,M,87.5,AD,3,3,ADNI1/GO Month 24,11/5/08,1/5/10,76.8,2,8,21,6,25,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,162100,162100,Brain,Both,image volume,native,All
+010_S_0829,ADNI,ADNI 1,F,68.4,AD,4,4,ADNI Screening,2/8/07,10/1/08,65,0.5,,24,3,,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118707,118707,Brain,Both,image volume,native,All
+010_S_0829,ADNI,ADNI 1,F,68.1,AD,4,4,ADNI1/GO Month 6,9/5/07,10/27/07,65.6,0.5,5,26,,10,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,78773,78773,Brain,Both,image volume,native,All
+010_S_0829,ADNI,ADNI 1,F,61.4,AD,4,4,ADNI1/GO Month 12,3/11/08,4/10/08,66.1,0.5,3,26,2,10,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,101977,101977,Brain,Both,image volume,native,All
+010_S_0829,ADNI,ADNI 1,F,62.1,AD,4,4,ADNI1/GO Month 24,2/11/09,2/27/09,67,0.5,5,24,5,16,MRI,MPR; ; N3; Scaled <- ASO-MPRAGE,,137223,137223,Brain,Both,image volume,native,All
+012_S_0634,ADNI,ADNI 1,M,80.7,MCI,3,3,ADNI Screening,6/16/06,10/1/08,82.2,0.5,,26,4,,MRI,MPR; ; N3; Scaled_2 <- MPRAGE SENS,,118691,118691,Brain,Both,image volume,native,All
+012_S_0634,ADNI,ADNI 1,M,79.8,MCI,3,3,ADNI1/GO Month 6,1/3/07,10/1/08,82.8,0.5,0,26,,2,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118736,118736,Brain,Both,image volume,native,All
+012_S_0634,ADNI,ADNI 1,M,79.8,MCI,3,3,ADNI1/GO Month 12,7/10/07,10/1/08,83.3,0.5,0,29,4,1,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118751,118751,Brain,Both,image volume,native,All
+012_S_0634,ADNI,ADNI 1,M,83.9,MCI,3,3,ADNI1/GO Month 18,1/17/08,2/21/08,83.8,0.5,0,28,,0,MRI,MPR; ; N3; Scaled <- MPRAGE AUTOSHIM ON,,91438,91438,Brain,Both,image volume,native,All
+012_S_0634,ADNI,ADNI 1,M,87.1,MCI,3,3,ADNI1/GO Month 24,7/2/08,10/26/08,84.3,0.5,0,26,2,0,MRI,MPR; ; N3; Scaled <- MPRAGE AUTOSHIM ON,,123826,123826,Brain,Both,image volume,native,All
+012_S_0637,ADNI,ADNI 1,F,51.7,CN,2,3,ADNI Screening,6/16/06,10/1/08,76.2,0,,28,0,,MRI,MPR; ; N3; Scaled_2 <- MPRAGE SENS,,118711,118711,Brain,Both,image volume,native,All
+012_S_0637,ADNI,ADNI 1,F,50.8,CN,2,3,ADNI1/GO Month 6,1/8/07,10/1/08,76.7,0,0,30,,2,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118739,118739,Brain,Both,image volume,native,All
+012_S_0637,ADNI,ADNI 1,F,50.8,CN,2,3,ADNI1/GO Month 12,7/5/07,10/1/08,77.2,0.5,2,29,0,2,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118737,118737,Brain,Both,image volume,native,All
+012_S_0637,ADNI,ADNI 1,F,51.7,CN,2,3,ADNI1/GO Month 24,7/8/08,10/22/08,78.2,0,0,30,0,0,MRI,MPR; ; N3; Scaled <- MPRAGE AUTOSHIM ON,,122791,122791,Brain,Both,image volume,native,All
+012_S_0689,ADNI,ADNI 1,M,82.1,AD,4,4,ADNI Screening,7/5/06,10/1/08,63.7,0.5,,22,4,,MRI,MPR-R; ; N3; Scaled_2 <- MPRAGE SENS,,118713,118713,Brain,Both,image volume,native,All
+012_S_0689,ADNI,ADNI 1,M,87.5,AD,4,4,ADNI1/GO Month 6,1/10/07,10/1/08,64.2,1,2,19,,10,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118740,118740,Brain,Both,image volume,native,All
+012_S_0689,ADNI,ADNI 1,M,82.6,AD,4,4,ADNI1/GO Month 12,7/19/07,10/1/08,64.7,0.5,2,17,4,17,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118754,118754,Brain,Both,image volume,native,All
+012_S_0689,ADNI,ADNI 1,M,80.3,AD,4,4,ADNI1/GO Month 24,7/15/08,10/16/08,65.7,1,6,10,5,23,MRI,MPR; ; N3; Scaled <- MPRAGE AUTOSHIM ON,,121247,121247,Brain,Both,image volume,native,All
+012_S_0803,ADNI,ADNI 1,F,65.5,AD,3,3,ADNI Screening,9/22/06,10/1/08,84.9,1,,22,0,,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118716,118716,Brain,Both,image volume,native,All
+012_S_0803,ADNI,ADNI 1,F,66.9,AD,3,3,ADNI1/GO Month 6,4/4/07,10/1/08,85.4,2,2,20,,26,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118747,118747,Brain,Both,image volume,native,All
+012_S_0803,ADNI,ADNI 1,F,65.8,AD,3,3,ADNI1/GO Month 12,10/9/07,11/15/07,85.9,2,1,12,0,28,MRI,MPR; ; N3; Scaled <- MPRAGE AUTOSHIM ON,,82120,82120,Brain,Both,image volume,native,All
+012_S_0803,ADNI,ADNI 1,F,62.6,AD,3,3,ADNI1/GO Month 24,9/30/08,10/27/08,86.9,2,0,15,1,28,MRI,MPR; ; N3; Scaled <- MPRAGE AUTOSHIM ON,,124069,124069,Brain,Both,image volume,native,All
+012_S_1133,ADNI,ADNI 1,F,66.2,CN,3,3,ADNI Screening,1/12/07,10/1/08,80,0,,30,0,,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118741,118741,Brain,Both,image volume,native,All
+012_S_1133,ADNI,ADNI 1,F,64.4,CN,3,3,ADNI1/GO Month 6,8/1/07,10/1/08,80.6,0,0,29,,0,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118758,118758,Brain,Both,image volume,native,All
+012_S_1133,ADNI,ADNI 1,F,66.7,CN,3,3,ADNI1/GO Month 12,2/4/08,3/8/08,81.1,0,0,30,0,0,MRI,MPR; ; N3; Scaled <- MPRAGE AUTOSHIM ON,,96218,96218,Brain,Both,image volume,native,All
+012_S_1133,ADNI,ADNI 1,F,63.5,CN,3,3,ADNI1/GO Month 24,2/2/09,2/16/09,82.1,0,0,30,0,0,MRI,MPR; ; N3; Scaled <- MPRAGE AUTOSHIM ON,,136099,136099,Brain,Both,image volume,native,All
+012_S_1133,ADNI,ADNI 1,F,68.9,CN,3,3,ADNI1/GO Month 36,2/8/10,3/8/12,83.1,0,0,30,1,0,MRI,MT1; N3m <- MPRAGE AUTOSHIM ON,,288894,288894,Brain,Both,image volume,native,All
+018_S_0286,ADNI,ADNI 1,M,102.1,AD,3,3,ADNI Screening,3/23/06,10/1/08,66,0.5,,26,3,,MRI,MPR; ; N3; Scaled_2 <- MPRAGE SENS,,118779,118779,Brain,Both,image volume,native,All
+018_S_0286,ADNI,ADNI 1,M,93,AD,3,3,ADNI1/GO Month 6,11/16/06,10/1/08,66.6,0.5,3,25,,10,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118783,118783,Brain,Both,image volume,native,All
+018_S_0286,ADNI,ADNI 1,M,93.4,AD,3,3,ADNI1/GO Month 12,5/15/07,10/1/08,67.1,0.5,3,18,2,12,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118788,118788,Brain,Both,image volume,native,All
+018_S_0286,ADNI,ADNI 1,M,91.6,AD,3,3,ADNI1/GO Month 24,5/15/08,6/4/08,68.1,1,4,17,2,17,MRI,MPR; ; N3; Scaled <- MPRAGE_ASO,,108440,108440,Brain,Both,image volume,native,All
+018_S_0335,ADNI,ADNI 1,F,68,AD,2,3,ADNI Screening,5/16/06,10/8/08,83.7,1,,20,3,,MRI,MPR; ; N3; Scaled_2 <- MPRAGE SENS,,119801,119801,Brain,Both,image volume,native,All
+018_S_0335,ADNI,ADNI 1,F,68,AD,2,3,ADNI1/GO Month 6,11/28/06,10/1/08,84.2,1,3,19,,24,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,118777,118777,Brain,Both,image volume,native,All
+018_S_0335,ADNI,ADNI 1,F,70.3,AD,2,3,ADNI1/GO Month 12,5/22/07,10/1/08,84.7,2,4,19,1,21,MRI,MPR; ; N3; Scaled_2 <- MPRAGE SENSE,,118778,118778,Brain,Both,image volume,native,All
+018_S_0335,ADNI,ADNI 1,F,70.8,AD,2,3,ADNI1/GO Month 24,6/24/08,10/22/08,85.8,2,7,22,1,26,MRI,MPR; ; N3; Scaled <- MPRAGE_ASO,,122856,122856,Brain,Both,image volume,native,All
+032_S_0147,ADNI,ADNI 1,F,69.8,AD,3,3,ADNI Screening,1/26/06,10/3/08,59.8,1,,25,4,,MRI,MPR; ; N3; Scaled_2 <- ADNI       MPRAGE,,119079,119079,Brain,Both,image volume,native,All
+032_S_0147,ADNI,ADNI 1,F,64.4,AD,3,3,ADNI1/GO Month 6,9/19/06,11/3/08,60.5,1,5,21,,17,MRI,MPR; ; N3; Scaled <- MPRAGE,,124906,124906,Brain,Both,image volume,native,All
+032_S_0147,ADNI,ADNI 1,F,65.8,AD,3,3,ADNI1/GO Month 12,2/19/07,11/3/08,60.9,1,20,13,3,22,MRI,MPR; ; N3; Scaled <- MPRAGE,,124892,124892,Brain,Both,image volume,native,All
+032_S_0147,ADNI,ADNI 1,F,69.8,AD,3,3,ADNI1/GO Month 24,3/26/08,4/21/08,62,2,8,10,4,28,MRI,MPR; ; N3; Scaled <- MPRAGE ASO,,103333,103333,Brain,Both,image volume,native,All
+032_S_0214,ADNI,ADNI 1,M,83,MCI,4,4,ADNI Screening,2/20/06,10/3/08,65.2,0.5,,27,1,,MRI,MPR-R; ; N3; Scaled_2 <- MPRAGE,,119084,119084,Brain,Both,image volume,native,All
+032_S_0214,ADNI,ADNI 1,M,81.7,MCI,4,4,ADNI1/GO Month 6,9/25/06,10/3/08,65.8,0.5,5,27,,8,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,119085,119085,Brain,Both,image volume,native,All
+032_S_0214,ADNI,ADNI 1,M,80.7,MCI,4,4,ADNI1/GO Month 12,3/19/07,10/3/08,66.3,0.5,2,25,0,5,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,119086,119086,Brain,Both,image volume,native,All
+032_S_0214,ADNI,ADNI 1,M,80.7,MCI,4,4,ADNI1/GO Month 18,10/25/07,2/6/08,66.9,0.5,3,23,,8,MRI,MPR; ; N3; Scaled <- MPRAGE ASO,,89623,89623,Brain,Both,image volume,native,All
+032_S_0214,ADNI,ADNI 1,M,80.7,MCI,4,4,ADNI1/GO Month 24,4/29/08,5/15/08,67.4,0.5,7,20,0,9,MRI,MPR; ; N3; Scaled <- MPRAGE ASO,,105747,105747,Brain,Both,image volume,native,All
+032_S_0214,ADNI,ADNI 1,M,81.7,MCI,4,4,ADNI1/GO Month 36,2/26/09,4/20/09,68.2,0.5,4,23,0,9,MRI,MPR; ; N3; Scaled <- MPRAGE ASO,,142010,142010,Brain,Both,image volume,native,All
+032_S_0400,ADNI,ADNI 1,M,96.2,AD,3,3,ADNI Screening,4/17/06,10/3/08,69.3,0.5,,26,1,,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,119087,119087,Brain,Both,image volume,native,All
+032_S_0400,ADNI,ADNI 1,M,98,AD,3,3,ADNI1/GO Month 6,10/27/06,10/3/08,69.9,1,4,23,,17,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,119088,119088,Brain,Both,image volume,native,All
+032_S_0400,ADNI,ADNI 1,M,93.4,AD,3,3,ADNI1/GO Month 12,5/18/07,10/3/08,70.4,1,10,20,3,18,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,119089,119089,Brain,Both,image volume,native,All
+032_S_0400,ADNI,ADNI 1,M,80.7,AD,3,3,ADNI1/GO Month 24,5/1/08,6/2/08,71.4,2,11,16,7,25,MRI,MPR; ; N3; Scaled <- MPRAGE ASO,,108024,108024,Brain,Both,image volume,native,All
+032_S_1169,ADNI,ADNI 1,F,78,CN,3,3,ADNI Screening,12/21/06,10/3/08,72.3,0,,30,4,,MRI,MPR-R; ; N3; Scaled_2 <- MPRAGE,,119118,119118,Brain,Both,image volume,native,All
+032_S_1169,ADNI,ADNI 1,F,70.8,CN,3,3,ADNI1/GO Month 6,8/24/07,10/3/08,72.9,0,0,28,,0,MRI,MPR; ; N3; Scaled_2 <- MPRAGE,,119119,119119,Brain,Both,image volume,native,All
+032_S_1169,ADNI,ADNI 1,F,73,CN,3,3,ADNI1/GO Month 12,1/17/08,3/8/08,73.3,0,0,29,5,0,MRI,MPR; ; N3; Scaled <- MPRAGE ASO,,96300,96300,Brain,Both,image volume,native,All
+032_S_1169,ADNI,ADNI 1,F,76.7,CN,3,3,ADNI1/GO Month 24,1/21/09,4/8/09,74.4,0,0,30,5,0,MRI,MPR; ; N3; Scaled <- MPRAGE ASO,,141216,141216,Brain,Both,image volume,native,All
+068_S_0109,ADNI,ADNI 1,F,60.9,AD,3,4,ADNI Screening,1/3/06,12/12/08,70.2,0.5,,25,1,,MRI,MPR; ; N3; Scaled_2 <- ADNI       MPRAGE,,130231,130231,Brain,Both,image volume,native,All
+068_S_0109,ADNI,ADNI 1,F,62.2,AD,3,4,ADNI1/GO Month 6,8/2/06,1/7/09,70.8,1,0,23,,14,MRI,MPR; ; N3; Scaled <- ADNI       MPRAGE,,132912,132912,Brain,Both,image volume,native,All
+068_S_0109,ADNI,ADNI 1,F,64.4,AD,3,4,ADNI1/GO Month 12,3/20/07,12/12/08,71.4,2,2,21,1,24,MRI,MPR; ; N3; Scaled_2 <- ADNI       MPRAGE,,130233,130233,Brain,Both,image volume,native,All
+068_S_0109,ADNI,ADNI 1,F,68.3,AD,3,4,ADNI1/GO Month 24,3/28/08,4/14/08,72.4,2,1,12,2,26,MRI,MPR; ; N3; Scaled <- ADNI       MPRAGE,,102511,102511,Brain,Both,image volume,native,All
+068_S_0127,ADNI,ADNI 1,M,134.8,CN,3,3,ADNI Screening,2/14/06,12/12/08,70.8,0,,29,1,,MRI,MPR; ; N3; Scaled_2 <- ADNI       MPRAGE,,130234,130234,Brain,Both,image volume,native,All
+068_S_0127,ADNI,ADNI 1,M,134.3,CN,3,3,ADNI1/GO Month 6,9/1/06,1/7/09,71.3,0.5,1,30,,0,MRI,MPR; ; N3; Scaled <- ADNI       MPRAGE,,132913,132913,Brain,Both,image volume,native,All
+068_S_0127,ADNI,ADNI 1,M,137,CN,3,3,ADNI1/GO Month 12,3/27/07,12/12/08,71.9,0.5,0,28,2,0,MRI,MPR; ; N3; Scaled_2 <- ADNI       MPRAGE,,130236,130236,Brain,Both,image volume,native,All
+068_S_0127,ADNI,ADNI 1,M,126.4,CN,3,3,ADNI1/GO Month 24,3/13/08,4/9/08,72.9,0,0,29,2,0,MRI,MPR; ; N3; Scaled <- ADNI       MPRAGE,,101739,101739,Brain,Both,image volume,native,All
+068_S_0127,ADNI,ADNI 1,M,122,CN,3,3,ADNI1/GO Month 36,3/27/09,7/17/09,73.9,0.5,0,29,1,0,MRI,MPR; ; N3; Scaled <- ADNI SH    MPRAGE ASO,,149596,149596,Brain,Both,image volume,native,All
+068_S_0210,ADNI,ADNI 1,F,72.6,CN,2,3,ADNI Screening,2/16/06,12/12/08,72.5,0,,29,0,,MRI,MPR; ; N3; Scaled_2 <- ADNI       MPRAGE,,130237,130237,Brain,Both,image volume,native,All
+068_S_0210,ADNI,ADNI 1,F,70.1,CN,2,3,ADNI1/GO Month 6,9/27/06,1/7/09,73.1,0,0,30,,0,MRI,MPR; ; N3; Scaled <- ADNI       MPRAGE,,132914,132914,Brain,Both,image volume,native,All
+068_S_0210,ADNI,ADNI 1,F,69.4,CN,2,3,ADNI1/GO Month 12,5/1/07,12/12/08,73.7,0,0,29,2,0,MRI,MPR; ; N3; Scaled_2 <- ADNI       MPRAGE,,130239,130239,Brain,Both,image volume,native,All
+068_S_0210,ADNI,ADNI 1,F,73.1,CN,2,3,ADNI1/GO Month 24,7/24/08,12/12/08,74.9,0,0,30,1,0,MRI,MPR; ; N3; Scaled <- ADNI SH    MPRAGE ASO,,130176,130176,Brain,Both,image volume,native,All
+068_S_0210,ADNI,ADNI 1,F,72.1,CN,2,3,ADNI1/GO Month 36,5/21/09,12/1/09,75.7,0.5,0,27,2,0,MRI,MPR; ; N3; Scaled <- ADNI SH    MPRAGE ASO,,159984,159984,Brain,Both,image volume,native,All
+068_S_0473,ADNI,ADNI 1,M,79.5,CN,3,4,ADNI Screening,5/3/06,4/2/09,72.7,0,,29,1,,MRI,MPR; ; N3; Scaled <- ADNI       MPRAGE,,140334,140334,Brain,Both,image volume,native,All
+068_S_0473,ADNI,ADNI 1,M,79,CN,3,4,ADNI1/GO Month 6,11/30/06,12/12/08,73.3,0,0,30,,0,MRI,MPR; ; N3; Scaled_2 <- ADNI       MPRAGE,,130244,130244,Brain,Both,image volume,native,All
+068_S_0473,ADNI,ADNI 1,M,80.5,CN,3,4,ADNI1/GO Month 12,5/1/07,12/12/08,73.7,0,0,30,0,0,MRI,MPR; ; N3; Scaled_2 <- ADNI       MPRAGE,,130245,130245,Brain,Both,image volume,native,All
+068_S_0473,ADNI,ADNI 1,M,79.4,CN,3,4,ADNI1/GO Month 24,5/8/08,12/12/08,74.7,0,0,30,0,0,MRI,MPR; ; N3; Scaled <- ADNI       MPRAGE,,130184,130184,Brain,Both,image volume,native,All
+068_S_0473,ADNI,ADNI 1,M,78.9,CN,3,4,ADNI1/GO Month 36,5/6/09,7/30/09,75.7,0.5,0,30,0,0,MRI,MPR; ; N3; Scaled <- ADNI SH    MPRAGE ASO,,151146,151146,Brain,Both,image volume,native,All
+123_S_0108,ADNI,ADNI 1,M,73.5,MCI,3,4,ADNI1/GO Month 36,2/12/09,1/25/10,81.4,1,1,24,2,20,MRI,MPR; ; N3; Scaled <- MPRAGE,,165343,165343,Brain,Both,image volume,native,All
+123_S_0298,ADNI,ADNI 1,M,75.8,CN,3,3,ADNI1/GO Month 36,4/17/09,7/8/09,79.6,0,3,29,0,0,MRI,MPR; ; N3; Scaled <- MPRAGEASO,,148209,148209,Brain,Both,image volume,native,All
+123_S_1300,ADNI,ADNI 1,F,47.6,MCI,3,3,ADNI1/GO Month 24,3/26/09,5/14/09,75.6,0.5,2,30,0,1,MRI,MPR; ; N3; Scaled <- MPRAGEASO,,143851,143851,Brain,Both,image volume,native,All
+123_S_1300,ADNI,ADNI 1,F,49.9,MCI,3,3,ADNI1/GO Month 36,3/31/10,6/7/10,76.6,0.5,2,30,2,2,MRI,MPR; ; N3; Scaled <- MPRAGEASO,,176976,176976,Brain,Both,image volume,native,All

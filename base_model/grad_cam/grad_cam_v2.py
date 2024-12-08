@@ -305,23 +305,23 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
                 aal_img = nib.load(template_path)
                 aal_data = aal_img.get_fdata().astype(np.float32)
                 
-                # Create a binary mask from AAL labels (all regions = 1)
-                template_data = (aal_data > 0).astype(np.float32)
-                
-                # Apply Gaussian smoothing for better visualization
+                # Instead of binary mask, keep region information
+                template_data = aal_data.copy()
+
+                # Apply light smoothing to region boundaries
                 template_data = gaussian_filter(template_data, sigma=0.5)
                 
-                # Resize AAL template to match input dimensions
+                # Resize while preserving intensity values
                 template_data = skTrans.resize(
                     template_data,
                     image_np.shape,
-                    order=3,
+                    order=1,  # Changed to order=1 for better interpolation
                     preserve_range=True,
                     anti_aliasing=True,
                     mode='constant'
                 )
                 
-                # Normalize template for visualization
+                # Min-max normalization for visualization
                 template = (template_data - template_data.min()) / (template_data.max() - template_data.min())
                 
             except Exception as e:
@@ -414,6 +414,8 @@ def kms_train_loop(model, train_loader, optimizer, loss_fn, device):
             batch_acc = (correct / len(data)) * 100
             log_info(f'Train Batch [{batch_idx}/{len(train_loader)}] '
                     f'Loss: {loss.item():.6f} Acc: {batch_acc:.2f}%')
+            # Clear memory periodically
+            torch.cuda.empty_cache()
     
     avg_loss = total_loss / len(train_loader)
     avg_acc = (total_correct / total_samples) * 100
@@ -421,10 +423,10 @@ def kms_train_loop(model, train_loader, optimizer, loss_fn, device):
     return avg_loss, avg_acc
 
 def validate(dataloader, model, criterion, device, epoch):
-    """Validation function with GradCAM visualization"""
     model.eval()
     val_loss = 0
     correct = 0
+    total_samples = 0  # Add explicit counter
     all_labels = []
     all_preds = []
     total_processed = 0
@@ -439,6 +441,7 @@ def validate(dataloader, model, criterion, device, epoch):
                 
                 val_loss += criterion(output, label).item()
                 correct += (output.argmax(1) == label.argmax(1)).type(torch.float).sum().item()
+                total_samples += img.size(0)  # Count actual samples in batch
                 
                 all_labels.extend(label.argmax(1).cpu().numpy())
                 all_preds.extend(output.argmax(1).cpu().numpy())
@@ -453,13 +456,17 @@ def validate(dataloader, model, criterion, device, epoch):
                         f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}.png',
                         template_path=TEMPLATE_PATH
                     )
+                    
+                # Clear memory after every batch
+                torch.cuda.empty_cache()
+                
             except Exception as e:
                 logging.error(f"Error during validation batch {batch_idx}: {str(e)}")
                 continue
     
     if total_processed > 0:
         val_loss /= total_processed
-        accuracy = 100 * correct / (total_processed * dataloader.batch_size)
+        accuracy = 100 * correct / total_samples  # Use actual sample count
     else:
         val_loss = float('inf')
         accuracy = 0.0
@@ -512,6 +519,8 @@ def main():
 
     try:
         for epoch in range(num_epochs):
+            # Clear memory at start of each epoch
+            torch.cuda.empty_cache()
             epoch_start_time = datetime.now()
             log_info(f"\nEpoch {epoch+1}/{num_epochs}")
             log_info("-" * 20)
@@ -519,10 +528,12 @@ def main():
             try:
                 # Training phase
                 train_loss, train_acc = kms_train_loop(model, train_loader, optimizer, criterion, device)
-                    
+                torch.cuda.empty_cache()  # Clear after training
+
                 # Validation phase with GradCAM
                 val_loss, val_acc, labels, preds = validate(val_loader, model, criterion, device, epoch)
-                
+                torch.cuda.empty_cache()  # Clear after validation
+
                 # Record metrics
                 train_losses.append(train_loss)
                 train_accuracies.append(train_acc)
@@ -530,6 +541,10 @@ def main():
                 val_accuracies.append(val_acc)
             
                 epoch_duration = datetime.now() - epoch_start_time
+
+                # Memory cleanup
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
             
                 # Log epoch summary
                 log_info(f"\nEpoch {epoch+1} Summary:")

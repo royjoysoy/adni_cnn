@@ -73,7 +73,7 @@ def log_info(message):
     logging.info(message)
 
 # Define template path
-TEMPLATE_PATH = "/home/simclr_project/simclr/SimCLR_RS/templates/mni305.cor.mgz"
+TEMPLATE_PATH = "/home/simclr_project/simclr/SimCLR_RS/templates/aal116MNI_temp.nii"
 
 # Verify template exists
 if not os.path.exists(TEMPLATE_PATH):
@@ -270,8 +270,6 @@ class GradCAM:
         
         finally:
             input_image.requires_grad = original_requires_grad
-
-TEMPLATE_PATH = "/Users/test_terminal/Desktop/adni_cnn/base_model/grad_cam/aal116MNI_temp.nii"
 
 def save_gradcam_visualization(model, image, label, save_path, template_path=None):
     try:

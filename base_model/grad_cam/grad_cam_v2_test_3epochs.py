@@ -633,7 +633,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
     # Training parameters
-    num_epochs = 30
+    num_epochs = 3
     train_losses = []
     train_accuracies = []
     val_losses = []

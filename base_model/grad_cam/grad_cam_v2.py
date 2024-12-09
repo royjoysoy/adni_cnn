@@ -1,26 +1,65 @@
+
+'''기본 설정/유틸리티
+    ↓
+이미지 처리 함수들
+    ↓
+데이터셋 클래스
+    ↓
+모델 및 시각화 클래스들
+    ↓
+학습/검증 함수들
+    ↓
+메인 실행 함수
+'''
+# 1. Libraries
+
+# 기본 Python 라이브러리
 import os
-import numpy as np
-import pandas as pd
-import nibabel as nib
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-import skimage.transform as skTrans
-from scipy.ndimage import gaussian_filter
-from skimage import exposure
-from torch.utils.data import Dataset, DataLoader
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import confusion_matrix, classification_report
-import logging
-from datetime import datetime
 import sys
 import time
-import datetime as dt
-import SimpleITK as sitk
+from datetime import datetime
+import logging
 
+# 수치 계산 및 데이터 처리
+import numpy as np
+import pandas as pd
+from scipy.ndimage import gaussian_filter
+
+# 딥러닝 관련
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
+
+# 이미지 처리
+import nibabel as nib
+import SimpleITK as sitk
+import skimage.transform as skTrans
+from skimage import exposure
+
+# 시각화
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# 머신러닝 도구
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, classification_report
+
+from contextlib import contextmanager
+
+# 2. 유틸리티 클래스/함수들을 한 곳에 모음
+class ResourceManager:
+    @staticmethod
+    @contextmanager
+    def manage_resources():
+        try:
+            yield
+        finally:
+            plt.close('all')
+            torch.cuda.empty_cache()
+
+# 3. 이미지 처리 관련 함수들을 한 곳에 모음
 def standardize_intensity(image):
     """
     Standardize image intensity to [-1,1] range with robust normalization
@@ -51,6 +90,210 @@ def standardize_intensity(image):
 def enhance_contrast(image):
     """Enhance image contrast"""
     return exposure.equalize_adapthist(image, clip_limit=0.03)
+
+def register_to_template(moving_image, fixed_template):
+    try:
+        # SimpleITK 이미지로 변환 시 원본 방향 정보 유지
+        moving_sitk = sitk.GetImageFromArray(moving_image.astype(np.float32))
+        fixed_sitk = sitk.GetImageFromArray(fixed_template.astype(np.float32))
+        
+        # 중심 정렬을 위한 초기 변환
+        initial_transform = sitk.CenteredTransformInitializer(
+            fixed_sitk, 
+            moving_sitk,
+            sitk.Euler3DTransform(),  # Affine 대신 Euler3D 사용
+            sitk.CenteredTransformInitializerFilter.GEOMETRY
+        )
+        
+        # 등록 방법 설정
+        registration_method = sitk.ImageRegistrationMethod()
+        registration_method.SetInitialTransform(initial_transform)
+        
+        # 최적화 파라미터 조정
+        registration_method.SetOptimizerAsGradientDescent(
+            learningRate=1.0,  # 학습률 증가
+            numberOfIterations=1000,
+            convergenceMinimumValue=1e-6
+        )
+        
+        # 메트릭 설정 변경
+        registration_method.SetMetricAsMeanSquares()
+        registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
+        registration_method.SetMetricSamplingPercentage(0.8)  # 샘플링 비율 증가
+        
+        final_transform = registration_method.Execute(fixed_sitk, moving_sitk)
+        
+        # 변환 적용
+        resampler = sitk.ResampleImageFilter()
+        resampler.SetReferenceImage(fixed_sitk)
+        resampler.SetInterpolator(sitk.sitkLinear)
+        resampler.SetDefaultPixelValue(0)
+        resampler.SetTransform(final_transform)
+        
+        registered_image = resampler.Execute(moving_sitk)
+        return sitk.GetArrayFromImage(registered_image)
+        
+    except Exception as e:
+        logging.error(f"Registration failed: {str(e)}")
+        return moving_image
+    
+# 4. 데이터 관련 클래스
+class CustomImageDataset(Dataset):
+    def __init__(self, data_df, path_column='New_Path', label_column='labels'):
+        self.data_df = data_df
+        self.path_column = path_column
+        self.label_column = label_column
+
+    def __len__(self):
+        return len(self.data_df)
+
+    def __getitem__(self, idx):
+        img_path = self.data_df.iloc[idx][self.path_column]
+        label = self.data_df.iloc[idx][self.label_column]
+        label = torch.tensor(label, dtype=torch.int64)
+        label = torch.nn.functional.one_hot(label, num_classes=3).float()
+        
+        # NIFTI 파일 로드
+        nifti_img = nib.load(img_path)
+        affine = nifti_img.affine # affine 행렬 확인
+        img_data = nifti_img.get_fdata() # 이미지 데이터 가져오기
+    
+        # RAS+ 방향으로 이미지 재정렬 (Right, Anterior, Superior)
+        if not np.allclose(affine, np.eye(4)):  # affine이 단위행렬이 아닌 경우
+            # 방향 정보 확인
+            orientation = nib.aff2axcodes(affine)
+        
+            # RAS+ 방향으로 변환이 필요한 경우
+            if orientation != ('R', 'A', 'S'):
+                # 축 순서 변경
+                img_data = np.transpose(img_data, [0, 2, 1])
+            
+                # 필요한 축에 대해 뒤집기
+                if orientation[0] != 'R':
+                    img_data = np.flip(img_data, axis=0)
+                if orientation[1] != 'A':
+                    img_data = np.flip(img_data, axis=1)
+                if orientation[2] != 'S':
+                    img_data = np.flip(img_data, axis=2)
+
+        # 크기 조정
+        img_data = skTrans.resize(img_data, (64, 64, 64), order=1, preserve_range=True)
+    
+        # 정규화
+        img_data = (img_data - img_data.mean()) / img_data.std()
+    
+        return torch.tensor(img_data, dtype=torch.float32).unsqueeze(0), label
+
+# 5. 모델 관련 클래스들
+class Custom3DCNN(nn.Module):
+    def __init__(self):
+        super(Custom3DCNN, self).__init__()
+        self.gradients = {}
+        self.activations = {}
+        
+        # 레이어 정의
+        self.conv1 = nn.Conv3d(1, 64, kernel_size=3, stride=1)
+        self.bn1 = nn.BatchNorm3d(64)
+        self.relu1 = nn.ReLU()
+        self.maxpool1 = nn.MaxPool3d(kernel_size=2, stride=2)
+        
+        self.conv2 = nn.Conv3d(64, 64, kernel_size=5, stride=1)
+        self.bn2 = nn.BatchNorm3d(64)
+        self.relu2 = nn.ReLU()
+        self.maxpool2 = nn.MaxPool3d(kernel_size=2, stride=3)
+        
+        self.conv3 = nn.Conv3d(64, 64, kernel_size=7, stride=1)
+        self.bn3 = nn.BatchNorm3d(64)
+        self.relu3 = nn.ReLU()
+        
+        self.fc1 = nn.Linear(1728, 864)
+        self.dropout1 = nn.Dropout(p=0.5)
+        self.fc2 = nn.Linear(864, 100)
+        self.dropout2 = nn.Dropout(p=0.5)
+        self.fc3 = nn.Linear(100, 3)
+        self.softmax = nn.Softmax(dim=1)
+        
+        # Hook 등록
+        self.conv3.register_forward_hook(self._save_activation('conv3'))
+        
+    def _save_activation(self, name):
+        def hook(module, input, output):
+            self.activations[name] = output
+        return hook
+        
+    def _save_gradient(self, name):
+        def hook(grad):
+            self.gradients[name] = grad
+        return hook
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu1(x)
+        x = self.maxpool1(x)
+        
+        x = self.conv2(x)
+        x = self.bn2(x)
+        x = self.relu2(x)
+        x = self.maxpool2(x)
+        
+        x = self.conv3(x)
+        x = self.bn3(x)
+        x = self.relu3(x)
+        
+        if x.requires_grad:
+            x.register_hook(self._save_gradient('conv3'))
+        
+        x = x.view(-1, 64*3*3*3)
+        x = self.dropout1(self.fc1(x))
+        x = self.dropout2(self.fc2(x))
+        x = self.fc3(x)
+        return self.softmax(x)
+    
+    def get_activations_gradient(self):
+        return self.gradients.get('conv3', None)
+    
+    def get_activations(self):
+        return self.activations.get('conv3', None)
+
+class GradCAM:
+    def __init__(self, model):
+        self.model = model
+        
+    def generate_cam(self, input_image, target_class=None):
+        batch_size = input_image.size(0)
+        cams = []
+        
+        for i in range(batch_size):
+            single_input = input_image[i:i+1]
+            output = self.model(single_input)
+            
+            if target_class is None:
+                current_target = output.argmax(dim=1)
+            else:
+                current_target = target_class[i] if isinstance(target_class, torch.Tensor) else torch.tensor([target_class], device=device)
+            
+            self.model.zero_grad()
+            target_output = output[0, current_target]
+            target_output.backward(retain_graph=(i < batch_size-1))
+            
+            gradients = self.model.get_activations_gradient()
+            activations = self.model.get_activations()
+            
+            if gradients is None or activations is None:
+                continue
+                
+            weights = torch.mean(gradients, dim=(2, 3, 4))[0]
+            cam = torch.zeros(activations.shape[2:], dtype=torch.float32).to(device)
+            
+            for j, w in enumerate(weights):
+                cam += w * activations[0, j, :, :, :]
+                
+            cam = F.relu(cam)
+            cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-7)
+            cams.append(cam.cpu().detach())
+            
+        return torch.stack(cams) if cams else None
 
 # Create logs directory if it doesn't exist
 os.makedirs('logs', exist_ok=True)
@@ -85,205 +328,20 @@ log_info(f"Using template from: {TEMPLATE_PATH}")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 log_info(f"Using device: {device}")
 
-def register_to_template(moving_image, fixed_template):
-    try:
-        # Convert to SimpleITK images
-        moving_sitk = sitk.GetImageFromArray(moving_image.astype(np.float32))
-        fixed_sitk = sitk.GetImageFromArray(fixed_template.astype(np.float32))
-        
-        # Initialize transform once
-        transform = sitk.AffineTransform(3)
-        initial_transform = sitk.CenteredTransformInitializer(
-            fixed_sitk, 
-            moving_sitk,
-            transform,
-            sitk.CenteredTransformInitializerFilter.GEOMETRY
-        )
-        
-        # Set up registration method
-        registration_method = sitk.ImageRegistrationMethod()
-        registration_method.SetInitialTransform(initial_transform)
-    
-        # Multi-resolution setup with more levels
-        registration_method.SetShrinkFactorsPerLevel([16, 8, 4, 2, 1])
-        registration_method.SetSmoothingSigmasPerLevel([4, 3, 2, 1, 0])
-        
-        registration_method.SetMetricAsMattesMutualInformation(numberOfHistogramBins=50)
-        registration_method.SetMetricSamplingStrategy(registration_method.RANDOM)
-        registration_method.SetMetricSamplingPercentage(0.2)
-        
-        registration_method.SetOptimizerAsGradientDescent(
-            learningRate=0.1,
-            numberOfIterations=500,
-            convergenceMinimumValue=1e-8,
-            convergenceWindowSize=20
-        )
-        
-        # Execute registration
-        final_transform = registration_method.Execute(fixed_sitk, moving_sitk)
-        
-        # Apply transform
-        registered_image = sitk.Resample(
-            moving_sitk,
-            fixed_sitk,
-            final_transform,
-            sitk.sitkBSpline,
-            0.0,
-            moving_sitk.GetPixelID()
-        )
-        
-        return sitk.GetArrayFromImage(registered_image)
-        
-    except Exception as e:
-        logging.error(f"Registration failed: {str(e)}")
-        return moving_image
-
-class CustomImageDataset(Dataset):
-    def __init__(self, data_df):
-        self.data_df = data_df
-
-    def __len__(self):
-        return len(self.data_df)
-
-    def __getitem__(self, idx):
-        img_path = self.data_df.iloc[idx][PATH_COLUMN]
-        label = self.data_df.iloc[idx]['labels']
-        label = torch.tensor(label, dtype=torch.int64)
-        label = torch.nn.functional.one_hot(label, num_classes=3).float()
-        
-        img = nib.load(img_path).get_fdata()
-        img = skTrans.resize(img, (64, 64, 64), order=1, preserve_range=True)
-        img = (img - img.mean()) / img.std()
-        img = torch.tensor(img, dtype=torch.float32).unsqueeze(0)
-        
-        return img, label
-
-class Custom3DCNN(nn.Module):
-    def __init__(self):
-        super(Custom3DCNN, self).__init__()
-        
-        self.conv1 = nn.Conv3d(1, 64, kernel_size=3, stride=1)
-        self.bn1 = nn.BatchNorm3d(64)
-        self.relu1 = nn.ReLU()
-        self.maxpool1 = nn.MaxPool3d(kernel_size=2, stride=2)
-        
-        self.conv2 = nn.Conv3d(64, 64, kernel_size=5, stride=1)
-        self.bn2 = nn.BatchNorm3d(64)
-        self.relu2 = nn.ReLU()
-        self.maxpool2 = nn.MaxPool3d(kernel_size=2, stride=3)
-        
-        self.conv3 = nn.Conv3d(64, 64, kernel_size=7, stride=1)
-        self.bn3 = nn.BatchNorm3d(64)
-        self.relu3 = nn.ReLU()
-        
-        self.fc1 = nn.Linear(1728, 864)
-        self.dropout1 = nn.Dropout(p=0.5)
-        self.fc2 = nn.Linear(864, 100)
-        self.dropout2 = nn.Dropout(p=0.5)
-        self.fc3 = nn.Linear(100, 3)
-        self.softmax = nn.Softmax(dim=1)
-        
-        self.gradients = None
-        self.activations = None
-
-    def activations_hook(self, grad):
-        self.gradients = grad
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu1(x)
-        x = self.maxpool1(x)
-        
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = self.relu2(x)
-        x = self.maxpool2(x)
-        
-        x = self.conv3(x)
-        x = self.bn3(x)
-        x = self.relu3(x)
-        
-        self.activations = x
-        if x.requires_grad:
-            x.register_hook(self.activations_hook)
-        
-        x = x.view(-1, 64*3*3*3)
-        x = self.dropout1(self.fc1(x))
-        x = self.dropout2(self.fc2(x))
-        x = self.fc3(x)
-        return self.softmax(x)
-    
-    def get_activations_gradient(self):
-        return self.gradients
-    
-    def get_activations(self):
-        return self.activations
-
-class GradCAM:
-    def __init__(self, model):
-        self.model = model
-        
-    def generate_cam(self, input_image, target_class=None):
-        original_requires_grad = input_image.requires_grad
-    
-        try:
-            input_image.requires_grad = True
-            self.model.eval()
-            
-            output = self.model(input_image)
-            
-            if target_class is None:
-                target_class = output.argmax(dim=1)
-            
-            self.model.zero_grad()
-            target_output = output[0, target_class]
-            target_output.backward()
-        
-            gradients = self.model.get_activations_gradient()
-            activations = self.model.get_activations()
-        
-            if gradients is None or activations is None:
-                return None
-        
-            weights = torch.mean(gradients, dim=(2, 3, 4))[0]
-            cam = torch.zeros(activations.shape[2:], dtype=torch.float32).to(device)
-            
-            for i, w in enumerate(weights):
-                cam += w * activations[0, i, :, :, :]
-        
-            cam = F.relu(cam)
-            cam = cam - cam.min()
-            cam = cam / (cam.max() + 1e-7)
-            
-            cam = cam.cpu().detach().numpy()
-            
-            del gradients
-            del activations
-            torch.cuda.empty_cache()
-        
-            return cam
-        
-        except Exception as e:
-            logging.error(f"Error in GradCAM generation: {str(e)}")
-            return None
-        
-        finally:
-            input_image.requires_grad = original_requires_grad
 
 def save_gradcam_visualization(model, image, label, save_path, template_path=None):
     try:
-        plt.close('all')
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        with ResourceManager.manage_resources():
+            with torch.amp.autocast('cuda'):
+                gradcam = GradCAM(model)
+                cam = gradcam.generate_cam(image.unsqueeze(0).to(device))
             
-        # Generate GradCAM
-        gradcam = GradCAM(model)
-        cam = gradcam.generate_cam(image.unsqueeze(0).to(device))
-        
-        if cam is None:
-            logging.warning(f"Failed to generate GradCAM for {save_path}")
-            return
+            if cam is None:
+                logging.warning(f"Failed to generate GradCAM for {save_path}")
+                return
+            
+        # GradCAM 생성 후 즉시 CPU로 이동
+        cam = cam.cpu().numpy()
         
         # Resize CAM to match input size
         cam = torch.tensor(cam).to(device)
@@ -295,27 +353,31 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
         ).squeeze().cpu().numpy()
         
         # Process input image
-        image_np = image[0].cpu().numpy()
+        image_np = image.cpu().numpy()
 
         # AAL Template processing
         template = None
         if template_path and os.path.exists(template_path):
             try:
-                # Load AAL atlas
                 aal_img = nib.load(template_path)
-                aal_data = aal_img.get_fdata().astype(np.float32)
-                
-                # Instead of binary mask, keep region information
-                template_data = aal_data.copy()
-
-                # Apply light smoothing to region boundaries
-                template_data = gaussian_filter(template_data, sigma=0.5)
-                
-                # Resize while preserving intensity values
+                template_data = aal_img.get_fdata()
+            
+                # RAS+ 방향으로 변환
+                orientation = nib.aff2axcodes(aal_img.affine)
+                if orientation != ('R', 'A', 'S'):
+                    template_data = np.transpose(template_data, [0, 2, 1])
+                    if orientation[0] != 'R':
+                        template_data = np.flip(template_data, axis=0)
+                    if orientation[1] != 'A':
+                        template_data = np.flip(template_data, axis=1)
+                    if orientation[2] != 'S':
+                        template_data = np.flip(template_data, axis=2)
+            
+                # 크기 조정
                 template_data = skTrans.resize(
                     template_data,
                     image_np.shape,
-                    order=1,  # Changed to order=1 for better interpolation
+                    order=1,
                     preserve_range=True,
                     anti_aliasing=True,
                     mode='constant'
@@ -331,26 +393,49 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
         if template is None:
             template = standardize_intensity(image_np)
             
+            
         # Create visualization
         fig, axes = plt.subplots(3, 4, figsize=(20, 15))
+
+        # 컬러맵 설정
+        for ax in axes.flat:
+            ax.set_aspect('equal')
         
         # Get middle slices
         mid_x = template.shape[0] // 2
         mid_y = template.shape[1] // 2
         mid_z = template.shape[2] // 2
         
+        # views = [
+        #     ('Sagittal', lambda x: np.rot90(x[mid_x, :, :], k=-1)),
+        #     ('Coronal', lambda x: np.rot90(x[:, mid_y, :], k=-1)),
+        #     ('Axial', lambda x: np.flipud(x[:, :, mid_z]))
+        # ]
+
+        # 수정된 코드
         views = [
-            ('Sagittal', lambda x: np.rot90(x[mid_x, :, :], k=-1)),
-            ('Coronal', lambda x: np.rot90(x[:, mid_y, :], k=-1)),
-            ('Axial', lambda x: np.flipud(x[:, :, mid_z]))
+            ('Coronal', lambda x: x[:, mid_y, :]),  # rot90 제거
+            ('Axial', lambda x: x[:, :, mid_z]),    # flipud 제거
+            ('Sagittal', lambda x: x[mid_x, :, :])  # rot90 제거
         ]
-        
+
+#         views = [
+#             ('Coronal', lambda x: np.rot90(x[:, mid_y, :], k=1)),     # 90도 회전
+#             ('Axial', lambda x: np.rot90(x[:, :, mid_z], k=1)),       # 90도 회전
+#             ('Sagittal', lambda x: np.rot90(x[mid_x, :, :], k=1))     # 90도 회전
+# ]
+
         for row, (view_name, slice_func) in enumerate(views):
             img_slice = slice_func(image_np)
             cam_slice = slice_func(cam)
             temp_slice = slice_func(template)
             
-            extent = [0, img_slice.shape[1], 0, img_slice.shape[0]]
+            # Adjust contrast for better visualization
+            img_slice = exposure.equalize_adapthist(img_slice)
+            
+            # extent 설정 수정
+            extent = [-img_slice.shape[1]/2, img_slice.shape[1]/2, 
+                      -img_slice.shape[0]/2, img_slice.shape[0]/2]
             
             # Original image
             axes[row,0].imshow(img_slice, cmap='gray', extent=extent)
@@ -369,13 +454,13 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
             
             # Overlay
             axes[row,3].imshow(temp_slice, cmap='gray', extent=extent)
-            axes[row,3].imshow(cam_slice, cmap='jet', alpha=0.7, extent=extent)
+            axes[row,3].imshow(cam_slice, cmap='jet', alpha=0.7, extent=extent) # alpha값을 올렸음 overlay 3rd 칼럼 잘보이게 하려고
             axes[row,3].set_title(f'{view_name} - AAL + GradCAM')
             axes[row,3].axis('off')
         
         plt.suptitle(f'GradCAM Visualization with AAL Atlas (Class {label.argmax().item()})')
         plt.tight_layout()
-        plt.savefig(save_path, bbox_inches='tight', pad_inches=0.1)
+        plt.savefig(save_path, bbox_inches='tight', pad_inches=0.1, dpi=300)
         plt.close()
         
     except Exception as e:
@@ -384,38 +469,38 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
         
     finally:
         plt.close('all')
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
 
-def kms_train_loop(model, train_loader, optimizer, loss_fn, device):
+# 6. 학습/검증 관련 함수들
+def train_loop(model, train_loader, optimizer, loss_fn, device):
     """Training loop function"""
     model.train()
     total_loss = 0
     total_correct = 0
     total_samples = 0
     
-    for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
-        optimizer.zero_grad()
-        output = model(data)
-        loss = loss_fn(output, target)
-        loss.backward()
-        optimizer.step()
-        
-        pred = output.argmax(dim=1, keepdim=True)
-        target_idx = target.argmax(dim=1, keepdim=True)
-        correct = pred.eq(target_idx).sum().item()
-        
-        total_loss += loss.item()
-        total_correct += correct
-        total_samples += len(data)
-        
-        if batch_idx % 10 == 0:
-            batch_acc = (correct / len(data)) * 100
-            log_info(f'Train Batch [{batch_idx}/{len(train_loader)}] '
-                    f'Loss: {loss.item():.6f} Acc: {batch_acc:.2f}%')
-            # Clear memory periodically
-            torch.cuda.empty_cache()
+    with torch.amp.autocast('cuda'):
+        for batch_idx, (data, target) in enumerate(train_loader):
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            
+            output = model(data)
+            loss = loss_fn(output, target)
+            loss.backward()
+            optimizer.step()
+            
+            pred = output.argmax(dim=1, keepdim=True)
+            target_idx = target.argmax(dim=1, keepdim=True)
+            correct = pred.eq(target_idx).sum().item()
+            
+            total_loss += loss.item()
+            total_correct += correct
+            total_samples += len(data)
+            
+            if batch_idx % 10 == 0:
+                batch_acc = (correct / len(data)) * 100
+                log_info(f'Train Batch [{batch_idx}/{len(train_loader)}] '
+                        f'Loss: {loss.item():.6f} Acc: {batch_acc:.2f}%')
     
     avg_loss = total_loss / len(train_loader)
     avg_acc = (total_correct / total_samples) * 100
@@ -423,57 +508,86 @@ def kms_train_loop(model, train_loader, optimizer, loss_fn, device):
     return avg_loss, avg_acc
 
 def validate(dataloader, model, criterion, device, epoch):
-    model.eval()
-    val_loss = 0
-    correct = 0
-    total_samples = 0  # Add explicit counter
-    all_labels = []
-    all_preds = []
-    total_processed = 0
-    
-    os.makedirs(f'logs/gradcam_epoch_{epoch}', exist_ok=True)
-    
-    with torch.set_grad_enabled(True):
-        for batch_idx, (img, label) in enumerate(dataloader):
-            try:
-                img, label = img.to(device), label.to(device)
-                output = model(img)
-                
-                val_loss += criterion(output, label).item()
-                correct += (output.argmax(1) == label.argmax(1)).type(torch.float).sum().item()
-                total_samples += img.size(0)  # Count actual samples in batch
-                
-                all_labels.extend(label.argmax(1).cpu().numpy())
-                all_preds.extend(output.argmax(1).cpu().numpy())
-                
-                total_processed += 1
-                
-                if batch_idx % 5 == 0:
-                    save_gradcam_visualization(
-                        model, 
-                        img[0],
-                        label[0],
-                        f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}.png',
-                        template_path=TEMPLATE_PATH
-                    )
-                    
-                # Clear memory after every batch
-                torch.cuda.empty_cache()
-                
-            except Exception as e:
-                logging.error(f"Error during validation batch {batch_idx}: {str(e)}")
-                continue
-    
-    if total_processed > 0:
-        val_loss /= total_processed
-        accuracy = 100 * correct / total_samples  # Use actual sample count
-    else:
-        val_loss = float('inf')
-        accuracy = 0.0
-        logging.error("No batches were successfully processed during validation")
-    
-    return val_loss, accuracy, all_labels, all_preds
+   model.eval()
+   val_loss = 0
+   correct = 0
+   total_samples = 0
+   all_labels = []
+   all_preds = []
+   total_processed = 0
 
+   os.makedirs(f'logs/gradcam_epoch_{epoch}', exist_ok=True)
+
+   with ResourceManager.manage_resources():
+       with torch.set_grad_enabled(True):
+           with torch.amp.autocast('cuda'):
+               for batch_idx, (img, label) in enumerate(dataloader):
+                   try:
+                       img, label = img.to(device), label.to(device)
+                       output = model(img)
+               
+                       loss = criterion(output, label)
+                       val_loss += loss.item()
+               
+                       pred = output.argmax(1)
+                       target = label.argmax(1)
+                       correct += (pred == target).type(torch.float).sum().item()
+                       total_samples += img.size(0)
+               
+                       all_labels.extend(target.cpu().numpy())
+                       all_preds.extend(pred.cpu().numpy())
+               
+                       total_processed += 1
+               
+                       # GradCAM 생성 (일부 배치에 대해서만)
+                       if batch_idx % 5 == 0:
+                           for i in range(min(3, len(img))):  # 배치당 최대 3개 이미지만 처리
+                               save_gradcam_visualization(
+                                   model,
+                                   img[i],
+                                   label[i],
+                                   f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}_img_{i}.png',
+                                   template_path=TEMPLATE_PATH
+                               )
+               
+                       # 메모리 정리
+                       if batch_idx % 10 == 0:
+                           torch.cuda.empty_cache()
+                           
+                   except Exception as e:
+                       logging.error(f"Error during validation batch {batch_idx}: {str(e)}")
+                       continue
+
+   # 결과 계산
+   if total_processed > 0:
+       val_loss /= total_processed
+       accuracy = 100 * correct / total_samples
+       
+       # 로깅
+       logging.info(f"Validation Epoch: {epoch}")
+       logging.info(f"Average loss: {val_loss:.4f}")
+       logging.info(f"Accuracy: {accuracy:.2f}%")
+       
+       # 혼동 행렬 생성 및 저장
+       try:
+           cm = confusion_matrix(all_labels, all_preds)
+           plt.figure(figsize=(10, 8))
+           sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+           plt.title(f'Confusion Matrix - Epoch {epoch}')
+           plt.ylabel('True Label')
+           plt.xlabel('Predicted Label')
+           plt.savefig(f'logs/confusion_matrix_epoch_{epoch}.png')
+           plt.close()
+       except Exception as e:
+           logging.error(f"Error creating confusion matrix: {str(e)}")
+           
+   else:
+       val_loss = float('inf')
+       accuracy = 0.0
+       logging.error("No batches were successfully processed during validation")
+   
+   return val_loss, accuracy, all_labels, all_preds
+#.7 메인함수
 def main():
     """Main training function"""
     # Load and prepare data
@@ -481,19 +595,19 @@ def main():
     df = pd.read_csv('/home/simclr_project/simclr/SimCLR_RS/df_modified.csv')
     log_info(f"Loaded dataset with {len(df)} samples")
 
-    global PATH_COLUMN, LABEL_COLUMN
-    PATH_COLUMN = 'New_Path'
-    LABEL_COLUMN = 'DX2'
+    
+    path_column = 'New_Path'
+    label_column = 'DX2'
 
     # Split data
-    paths = df[PATH_COLUMN].tolist()
-    labels = df[LABEL_COLUMN]
+    paths = df[path_column].tolist()
+    labels = df[label_column]
     X_train, X_val, y_train, y_val = train_test_split(
         paths, labels, test_size=0.2, random_state=42, stratify=labels
     )
 
-    train_df = pd.DataFrame({PATH_COLUMN: X_train, 'labels': y_train})
-    val_df = pd.DataFrame({PATH_COLUMN: X_val, 'labels': y_val})
+    train_df = pd.DataFrame({path_column: X_train, 'labels': y_train})
+    val_df = pd.DataFrame({path_column: X_val, 'labels': y_val})
 
     # Create data loaders
     train_dataset = CustomImageDataset(train_df)
@@ -508,7 +622,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
     # Training parameters
-    num_epochs = 30
+    num_epochs = 3
     train_losses = []
     train_accuracies = []
     val_losses = []
@@ -527,7 +641,7 @@ def main():
             
             try:
                 # Training phase
-                train_loss, train_acc = kms_train_loop(model, train_loader, optimizer, criterion, device)
+                train_loss, train_acc = train_loop(model, train_loader, optimizer, criterion, device)
                 torch.cuda.empty_cache()  # Clear after training
 
                 # Validation phase with GradCAM

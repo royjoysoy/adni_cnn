@@ -538,17 +538,28 @@ def validate(dataloader, model, criterion, device, epoch):
                        all_preds.extend(pred.cpu().numpy())
                
                        total_processed += 1
+                       
+                       # 매 배치마다 GradCAM 생성
+                       for i in range(min(3, len(img))):
+                        save_gradcam_visualization(
+                            model,
+                            img[i], 
+                            label[i],
+                            f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}_img_{i}.png',
+                            template_path=TEMPLATE_PATH
+                        )
+
                
-                       # GradCAM 생성 (일부 배치에 대해서만)
-                       if batch_idx % 5 == 0:
-                           for i in range(min(3, len(img))):  # 배치당 최대 3개 이미지만 처리
-                               save_gradcam_visualization(
-                                   model,
-                                   img[i],
-                                   label[i],
-                                   f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}_img_{i}.png',
-                                   template_path=TEMPLATE_PATH
-                               )
+                    #    # GradCAM 생성 (일부 배치에 대해서만)
+                    #    if batch_idx % 5 == 0: # 5번째 마다 GradCam 생성
+                    #        for i in range(min(3, len(img))):  # 배치당 최대 3개 이미지만 처리
+                    #            save_gradcam_visualization(
+                    #                model,
+                    #                img[i],
+                    #                label[i],
+                    #                f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}_img_{i}.png',
+                    #                template_path=TEMPLATE_PATH
+                    #           )
                
                        # 메모리 정리
                        if batch_idx % 10 == 0:

@@ -296,7 +296,11 @@ class GradCAM:
         return torch.stack(cams) if cams else None
 
 # Create logs directory if it doesn't exist
-os.makedirs('logs', exist_ok=True)
+try:
+    os.makedirs('logs', exist_ok=True)
+    print("Logs directory created successfully")
+except Exception as e:
+    print(f"Error creating logs directory: {str(e)}")
 
 # Set up logging
 current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -538,28 +542,17 @@ def validate(dataloader, model, criterion, device, epoch):
                        all_preds.extend(pred.cpu().numpy())
                
                        total_processed += 1
-                       
-                       # 매 배치마다 GradCAM 생성
-                       for i in range(min(3, len(img))):
-                        save_gradcam_visualization(
-                            model,
-                            img[i], 
-                            label[i],
-                            f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}_img_{i}.png',
-                            template_path=TEMPLATE_PATH
-                        )
-
                
-                    #    # GradCAM 생성 (일부 배치에 대해서만)
-                    #    if batch_idx % 5 == 0: # 5번째 마다 GradCam 생성
-                    #        for i in range(min(3, len(img))):  # 배치당 최대 3개 이미지만 처리
-                    #            save_gradcam_visualization(
-                    #                model,
-                    #                img[i],
-                    #                label[i],
-                    #                f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}_img_{i}.png',
-                    #                template_path=TEMPLATE_PATH
-                    #           )
+                       # GradCAM 생성 (일부 배치에 대해서만)
+                       if batch_idx % 5 == 0:
+                           for i in range(min(3, len(img))):  # 배치당 최대 3개 이미지만 처리
+                               save_gradcam_visualization(
+                                   model,
+                                   img[i],
+                                   label[i],
+                                   f'logs/gradcam_epoch_{epoch}/gradcam_batch_{batch_idx}_img_{i}.png',
+                                   template_path=TEMPLATE_PATH
+                               )
                
                        # 메모리 정리
                        if batch_idx % 10 == 0:
@@ -600,6 +593,7 @@ def validate(dataloader, model, criterion, device, epoch):
    return val_loss, accuracy, all_labels, all_preds
 #.7 메인함수
 def main():
+    print("Current working directory:", os.getcwd()) # 스크립트의 실행 경로를 확인
     """Main training function"""
     # Load and prepare data
     log_info("\nLoading data...")
@@ -633,8 +627,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
 
     # Training parameters
-    num_epochs = 3
-
+    num_epochs = 10
     train_losses = []
     train_accuracies = []
     val_losses = []

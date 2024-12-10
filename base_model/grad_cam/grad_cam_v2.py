@@ -296,7 +296,11 @@ class GradCAM:
         return torch.stack(cams) if cams else None
 
 # Create logs directory if it doesn't exist
-os.makedirs('logs', exist_ok=True)
+try:
+    os.makedirs('logs', exist_ok=True)
+    print("Logs directory created successfully")
+except Exception as e:
+    print(f"Error creating logs directory: {str(e)}")
 
 # Set up logging
 current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -589,6 +593,7 @@ def validate(dataloader, model, criterion, device, epoch):
    return val_loss, accuracy, all_labels, all_preds
 #.7 메인함수
 def main():
+    print("Current working directory:", os.getcwd()) # 스크립트의 실행 경로를 확인
     """Main training function"""
     # Load and prepare data
     log_info("\nLoading data...")

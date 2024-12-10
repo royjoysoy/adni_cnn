@@ -634,6 +634,7 @@ def main():
 
     # Training parameters
     num_epochs = 3
+
     train_losses = []
     train_accuracies = []
     val_losses = []

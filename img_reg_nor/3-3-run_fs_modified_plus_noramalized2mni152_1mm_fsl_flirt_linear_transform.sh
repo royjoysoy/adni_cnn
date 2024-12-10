@@ -19,8 +19,8 @@ export PATH=${FSLDIR}/bin:${PATH}
 
 
 # Set input and output directories
-raw_dir="/projects4/royseo_workingdir/raw_w_acq_date"
-export SUBJECTS_DIR="/projects4/royseo_workingdir/normalized2mni152_1mm"
+raw_dir="/ibic/scratch/royseo_workingdir/raw_w_acq_date"
+export SUBJECTS_DIR="//ibic/scratch/royseo_workingdir/normalized2mni152_1mm"
 
 # Get the filename and parse components
 file_name=$(basename "$1") # nii 포함된 파일이름만 추출, 경로는 없애고

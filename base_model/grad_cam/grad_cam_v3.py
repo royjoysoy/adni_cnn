@@ -142,11 +142,27 @@ class GradCAM:
     def save_gradient(self, module, grad_input, grad_output):
         self.gradients = grad_output[0]
 
-    def generate(self, class_idx):
-        weights = self.gradients.mean(dim=[2, 3, 4], keepdim=True)
-        cam = (weights * self.activation).sum(dim=1, keepdim=True)
-        cam = F.relu(cam)
-        return cam
+    def generate(self, class_idx, inputs):
+        # Run the model to get the output
+        self.model.eval()
+        self.outputs = self.model(inputs)  # Store model's output
+        print(f"Outputs shape: {self.outputs.shape}")
+        print(f"Target class: {class_idx}")
+
+        # Backpropagate to compute gradients for the selected class
+        target = self.outputs[0, class_idx]  # Assuming you want the class for the first sample
+        target.backward()
+
+        if self.gradients is None:
+            print("No gradients computed!")
+            return None  # Or handle it accordingly
+        else:
+            # Compute the weights (average gradients across channels and spatial dimensions)
+            weights = self.gradients.mean(dim=[2, 3, 4], keepdim=True)
+            cam = (weights * self.activation).sum(dim=1, keepdim=True)
+            cam = F.relu(cam)
+            return cam
+
 
 def train_one_epoch(train_loader, model, criterion, optimizer, device, patience=None):
     model.train()
@@ -274,32 +290,34 @@ def main():
                 # Save Grad-CAM every epoch
             for i, (inputs, _) in enumerate(train_loader):  # Unpack both inputs and labels
                 inputs = inputs.to(device)  # Ensure inputs are moved to the GPU
-                outputs = model(inputs)
-                target_class = outputs.argmax(dim=1).item()
-                grad_cam = GradCAM(model, model.conv3)
-                outputs.gather(1, target_class.unsqueeze(1)).sum().backward()
+                outputs = model(inputs)  # Forward pass through the model
+                
+                # Process each sample in the batch
+                for batch_idx in range(outputs.size(0)):
+                    if batch_idx < outputs.size(0):  # Check that the batch_idx is valid
+                        target_class = outputs.argmax(dim=1)[batch_idx]  # Get the class index for this sample
 
-                cam = grad_cam.generate(target_class)
+                        grad_cam = GradCAM(model, model.conv3)
+                
+                        # Backprop for Grad-CAM
+                        cam = grad_cam.generate(target_class, inputs)  # Pass inputs to GradCAM
 
-                # Save Grad-CAM visualization
-                cam = cam.squeeze().detach().cpu().numpy()
-                cam_resized = zoom(cam, (atlas_data.shape[0] / 64,
-                                        atlas_data.shape[1] / 64,
-                                        atlas_data.shape[2] / 64), order=1)
+                        # Save Grad-CAM visualization
+                        cam = cam.squeeze().detach().cpu().numpy()
+                        cam_resized = zoom(cam, (atlas_data.shape[0] / 64,
+                                                atlas_data.shape[1] / 64,
+                                                atlas_data.shape[2] / 64), order=1)
 
-                plt.figure(figsize=(12, 6))
-                plt.subplot(1, 2, 1)
-                plt.title('AAL Atlas Slice')
-                plt.imshow(atlas_data[:, :, atlas_data.shape[2] // 2], cmap='gray')
-                plt.subplot(1, 2, 2)
-                plt.title('Grad-CAM Overlay')
-                plt.imshow(atlas_data[:, :, atlas_data.shape[2] // 2], cmap='gray')
-                plt.imshow(cam_resized[:, :, atlas_data.shape[2] // 2], cmap='jet', alpha=0.5)
-                plt.savefig(f"grad_cam_epoch{epoch + 1}_sample{i}.png")
-                plt.close()
-
-                # Only log one sample per epoch for brevity
-                break
+                        plt.figure(figsize=(12, 6))
+                        plt.subplot(1, 2, 1)
+                        plt.title('AAL Atlas Slice')
+                        plt.imshow(atlas_data[:, :, atlas_data.shape[2] // 2], cmap='gray')
+                        plt.subplot(1, 2, 2)
+                        plt.title('Grad-CAM Overlay')
+                        plt.imshow(atlas_data[:, :, atlas_data.shape[2] // 2], cmap='gray')
+                        plt.imshow(cam_resized[:, :, atlas_data.shape[2] // 2], cmap='jet', alpha=0.5)
+                        plt.savefig(f"grad_cam_epoch{epoch + 1}_sample{i}_batch{batch_idx}.png")
+                        plt.close()
 
 
 

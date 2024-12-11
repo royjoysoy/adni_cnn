@@ -347,17 +347,24 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
         # GradCAM 생성 후 즉시 CPU로 이동
         cam = cam.cpu().numpy()
         
-        # Resize CAM to match input size
-        cam = torch.tensor(cam).to(device)
-        cam = F.interpolate(
-            cam.unsqueeze(0).unsqueeze(0),
-            size=(64, 64, 64),
-            mode='trilinear',
-            align_corners=False
-        ).squeeze().cpu().numpy()
+        # 크기 조정 전에 현재 shape 기록
+        logging.info(f"CAM shape before resize: {cam.shape}")
         
+        # skimage를 사용하여 리사이즈
+        cam = skTrans.resize(
+            cam[0],  # 첫 번째 배치만 선택 
+            (64, 64, 64),
+            order=1,
+            preserve_range=True,
+            anti_aliasing=True
+        )
+
         # Process input image
         image_np = image.cpu().numpy()
+
+        # 모든 이미지 데이터 정규화
+        cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam))  # [0, 1] 범위로
+        image_np = (image_np - np.min(image_np)) / (np.max(image_np) - np.min(image_np))  # [0, 1] 범위로
 
         # AAL Template processing
         template = None
@@ -387,81 +394,64 @@ def save_gradcam_visualization(model, image, label, save_path, template_path=Non
                     mode='constant'
                 )
                 
-                # Min-max normalization for visualization
-                template = (template_data - template_data.min()) / (template_data.max() - template_data.min())
+                # 마지막에 정규화
+                template = (template_data - np.min(template_data)) / (np.max(template_data) - np.min(template_data))
                 
             except Exception as e:
                 logging.error(f"AAL template processing failed: {str(e)}")
                 template = None
         
         if template is None:
-            template = standardize_intensity(image_np)
-            
-            
-        # Create visualization
-        fig, axes = plt.subplots(3, 4, figsize=(20, 15))
-
-        # 컬러맵 설정
-        for ax in axes.flat:
-            ax.set_aspect('equal')
+            template = image_np  # 이미 정규화된 이미지 사용
         
         # Get middle slices
         mid_x = template.shape[0] // 2
         mid_y = template.shape[1] // 2
         mid_z = template.shape[2] // 2
         
-        # views = [
-        #     ('Sagittal', lambda x: np.rot90(x[mid_x, :, :], k=-1)),
-        #     ('Coronal', lambda x: np.rot90(x[:, mid_y, :], k=-1)),
-        #     ('Axial', lambda x: np.flipud(x[:, :, mid_z]))
-        # ]
-
-        # 수정된 코드
+        # Define views
         views = [
-            ('Coronal', lambda x: x[:, mid_y, :]),  # rot90 제거
-            ('Axial', lambda x: x[:, :, mid_z]),    # flipud 제거
-            ('Sagittal', lambda x: x[mid_x, :, :])  # rot90 제거
+            ('Coronal', lambda x: x[:, mid_y, :]),
+            ('Axial', lambda x: x[:, :, mid_z]),
+            ('Sagittal', lambda x: x[mid_x, :, :])
         ]
 
-#         views = [
-#             ('Coronal', lambda x: np.rot90(x[:, mid_y, :], k=1)),     # 90도 회전
-#             ('Axial', lambda x: np.rot90(x[:, :, mid_z], k=1)),       # 90도 회전
-#             ('Sagittal', lambda x: np.rot90(x[mid_x, :, :], k=1))     # 90도 회전
-# ]
+        # Create visualization
+        fig, axes = plt.subplots(3, 4, figsize=(20, 15))
+
+        # 컬러맵 설정
+        for ax in axes.flat:
+            ax.set_aspect('equal')
 
         for row, (view_name, slice_func) in enumerate(views):
             img_slice = slice_func(image_np)
             cam_slice = slice_func(cam)
             temp_slice = slice_func(template)
             
-            # Adjust contrast for better visualization
+            # Adjust contrast for better visualization (선택적)
             img_slice = exposure.equalize_adapthist(img_slice)
             
-            # extent 설정 수정
             extent = [-img_slice.shape[1]/2, img_slice.shape[1]/2, 
-                      -img_slice.shape[0]/2, img_slice.shape[0]/2]
+                     -img_slice.shape[0]/2, img_slice.shape[0]/2]
             
-            # Original image
-            axes[row,0].imshow(img_slice, cmap='gray', extent=extent)
+            # 각 서브플롯에 이미지 표시 (vmin, vmax 명시적 지정)
+            axes[row,0].imshow(img_slice, cmap='gray', extent=extent, vmin=0, vmax=1)
             axes[row,0].set_title(f'{view_name} - Original')
             axes[row,0].axis('off')
             
-            # AAL template
-            axes[row,1].imshow(temp_slice, cmap='gray', extent=extent)
+            axes[row,1].imshow(temp_slice, cmap='gray', extent=extent, vmin=0, vmax=1)
             axes[row,1].set_title(f'{view_name} - AAL Template')
             axes[row,1].axis('off')
             
-            # GradCAM
-            axes[row,2].imshow(cam_slice, cmap='jet', extent=extent)
+            axes[row,2].imshow(cam_slice, cmap='jet', extent=extent, vmin=0, vmax=1)
             axes[row,2].set_title(f'{view_name} - GradCAM')
             axes[row,2].axis('off')
             
-            # Overlay
-            axes[row,3].imshow(temp_slice, cmap='gray', extent=extent)
-            axes[row,3].imshow(cam_slice, cmap='jet', alpha=0.7, extent=extent) # alpha값을 올렸음 overlay 3rd 칼럼 잘보이게 하려고
+            axes[row,3].imshow(temp_slice, cmap='gray', extent=extent, vmin=0, vmax=1)
+            axes[row,3].imshow(cam_slice, cmap='jet', extent=extent, vmin=0, vmax=1, alpha=0.7)
             axes[row,3].set_title(f'{view_name} - AAL + GradCAM')
             axes[row,3].axis('off')
-        
+
         plt.suptitle(f'GradCAM Visualization with AAL Atlas (Class {label.argmax().item()})')
         plt.tight_layout()
         plt.savefig(save_path, bbox_inches='tight', pad_inches=0.1, dpi=300)

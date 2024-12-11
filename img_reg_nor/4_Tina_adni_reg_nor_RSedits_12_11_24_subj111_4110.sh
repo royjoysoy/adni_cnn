@@ -4,7 +4,7 @@
 #$ -S /bin/bash
 #$ -N adnijob
 #$ -V
-#$ -t 1-100
+#$ -t 1-4000          # 4000개 돌수 있도록 바꿈 12-11-2024 in Korea time 
 #$ -cwd
 #$ -o sgestdout       # directory where standard output are saved
 #$ -e sgestderr       # directory where standard errors are saved
@@ -20,10 +20,7 @@ DIR="/ibic/scratch/royseo_workingdir/scripts" # Tina asked me to change these fr
 : "${SGE_TASK_ID:=1}"
 ##############################################
 
-subject=$(sed -n -e "${SGE_TASK_ID}p" "$DIR/subj_list_ADNI1234_28001_11-4010.log") #Tina가 연락와서 4010번까지 안돌고 100개만 돌았다고 미안하다고 연락옴
-# 100개만 돈 이유는 line 7때문에 그렇다. #12/11/2024 in Korea Time 결론은 subj 11-110 번까지 돈것임 
-# 그래서 나중에 이해하기 쉽도록 subj_list_ADNI1234_28001_11-4010.log의 첫 100개만 저장하여 subj_list_ADNI1234_28001_11-110.log파일로 만들었음
-# subj_list_ADNI1234_28001_11-4010.log는 지움
+subject=$(sed -n -e "${SGE_TASK_ID}p" "$DIR/subj_list_ADNI1234_28001_111-4110.log")
 
 #PROJ_DIR="/projects4/royseo_workingdir/raw_w_acq_date" #location of image files
 PROJ_DIR="/ibic/scratch/royseo_workingdir/raw_w_acq_date" #location of image files

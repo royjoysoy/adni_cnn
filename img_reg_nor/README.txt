@@ -11,7 +11,7 @@
   - file: sub_list_ADNI1234_1-10.log
   - commend: qsub -q all.q 4_Tina_adni_reg_nor_RSedits_12_07_24_subj1-10.sh 
 
-2. 잘 되는 것 확인하고 4000개 subjects 를 돌리기로 함
+2. 잘 되는 것 확인하고 4000개 subjects 를 돌리기로 함 : 100개만 돌아감
 - file: subj_list_ADNI1234_11-4010.log
 - commend: qsub -q all.q 4_Tina_adni_reg_nor_RSedits_12_XX_24_subj11-4010.sh 
          : 4_Tina4_Tina_adni_reg_nor_RSedits_12_XX_24_XXXXX
@@ -25,3 +25,11 @@
 - normalized2mni152_1mm_11_110 이름 다시 만들고 새롭게 normalized2mni152_1mm만들고 돌림 
 - file: subj_list_ADNI1234_28001_111-4110.log
 - commend: qsub -q all.q 4_Tina_adni_reg_nor_RSedits_12_11_24_subj111_4110.sh
+
+4. 12/16/24
+- found out the mismatch between royseo@adrc.ibic.washington.edu:/ibic/scratch/royseo_workingdir/scripts/
+- conti. and my local computer ~/Desktop/adni_cnn/img_reg_nor folder
+- conti.내가 100개만 돌아간것 알고, 전에 4000개를 돌리려고 해놓았던 스크립트나 subj_list_ADNI1234_28001_111-4110.log파일을 
+- conti. update했었는데 그것을  adrc.ibic.washington.edu:/ibic/scratch/royseo_workingdir/scripts에서 옮겼음
+- local computer 에서 사용했던 명령어: 
+scp royseo@adrc.ibic.washington.edu:/ibic/scratch/royseo_workingdir/scripts/{4_Tina_adni_reg_nor_RSedits_12_07_24_subj1-10.sh,subj_list_ADNI1234_28001_11-4010.log} ~/Desktop/adni_cnn/img_reg_nor/

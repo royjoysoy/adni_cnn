@@ -4,7 +4,7 @@
 #$ -S /bin/bash
 #$ -N adnijob
 #$ -V
-#$ -t 1-11          # 11 subjects 가 돌 수 있도록 바꿈 
+#$ -t 1-6000          # 6000 subjects 가 돌 수 있도록 바꿈 
 #$ -cwd
 #$ -o sgestdout       # directory where standard output are saved
 #$ -e sgestderr       # directory where standard errors are saved
@@ -20,7 +20,7 @@ DIR="/ibic/scratch/royseo_workingdir/scripts" # Tina asked me to change these fr
 : "${SGE_TASK_ID:=1}"
 ##############################################
 
-subject=$(sed -n -e "${SGE_TASK_ID}p" "$DIR/subj_list_ADNI1234_28001_4111-6000_troubleshoot.log")
+subject=$(sed -n -e "${SGE_TASK_ID}p" "$DIR/subj_list_ADNI1234_28001_6001-12000.log")
 
 #PROJ_DIR="/projects4/royseo_workingdir/raw_w_acq_date" #location of image files
 PROJ_DIR="/ibic/scratch/royseo_workingdir/raw_w_acq_date" #location of image files

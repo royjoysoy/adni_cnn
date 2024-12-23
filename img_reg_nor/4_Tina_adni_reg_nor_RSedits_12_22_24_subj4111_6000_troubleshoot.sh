@@ -12,7 +12,7 @@
 # variables
 # myprog="/projects4/royseo_workingdir/scripts/3-3-run_fs_modified_plus_noramalized2mni152_1mm_fsl_flirt_linear_transform.sh"
 # DIR="/projects4/royseo_workingdir/scripts" # location of the list of name of subject's image files
-myprog="/ibic/scratch/royseo_workingdir/scripts/3-3-run_fs_modified_plus_noramalized2mni152_1mm_fsl_flirt_linear_transform.sh"
+myprog="/ibic/scratch/royseo_workingdir/scripts/3-3-run_fs_modified_plus_normalized2mni152_1mm_fsl_flirt_linear_transform_subj4111_6000_troubleshoot.sh"
 DIR="/ibic/scratch/royseo_workingdir/scripts" # Tina asked me to change these from /projects4/ to /ibic/scratch/ on 12-9-2024 "
 
 ### comment this part when you recurit SGE ###

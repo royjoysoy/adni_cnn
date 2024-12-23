@@ -33,3 +33,32 @@
 - conti. update했었는데 그것을  adrc.ibic.washington.edu:/ibic/scratch/royseo_workingdir/scripts에서 옮겼음
 - local computer 에서 사용했던 명령어: 
 scp royseo@adrc.ibic.washington.edu:/ibic/scratch/royseo_workingdir/scripts/{4_Tina_adni_reg_nor_RSedits_12_07_24_subj1-10.sh,subj_list_ADNI1234_28001_11-4010.log} ~/Desktop/adni_cnn/img_reg_nor/
+
+
+5. 12/23/24
+- subj_list_ADNI11234_28001_4111-6000.log에서 11subjects 안 돌아간것 qsub -q all.q 4_Tina_adni_reg_nor_RSedits_12_22_24_subj4111_6000_troubleshoot.sh로 돌리기 시작 12/23/24 12:43pm (Korea Time)
+- 자세한 내용 log 는 "subj_list_ADNI1234_28001_4111-6000_troubleshoot.txt" 이 파일에서 확인
+- "3-3-run_fs_modified_plus_noramalized2mni152_1mm_fsl_flirt_linear_transform.sh" 파일 이름에 noramalized 오타 발견 그래서 고침 -> 3-3-run_fs_modified_plus_normalized2mni152_1mm_fsl_flirt_linear_transform.sh
+- normalize2mni152_1mm (output 폴더) -> normazlied2mni152_1mm_4111-6000wo11으로 바꿈
+- normazlied2mni152_1mm_4111-6000wo11 폴더는 사실 1890개 즉 trouble났던 다음의 11 subjects를 포함하고 있음
+016_S_0702_2013-05-09_S18903_I377040.nii
+021_S_0337_2012-04-24_S14825_I327057.nii
+021_S_0337_2012-04-24_S14825_I327059.nii
+021_S_0337_2012-04-24_S14825_I327062.nii
+021_S_0337_2012-04-24_S14825_I327074.nii
+021_S_0337_2013-05-07_S18878_I389140.nii
+021_S_0337_2013-05-07_S18879_I389138.nii
+021_S_0337_2014-04-24_S21696_I432139.nii
+021_S_0337_2014-04-24_S21696_I432140.nii
+021_S_0337_2015-05-07_S25882_I510022.nii
+021_S_0337_2015-05-07_S25882_I510051.nii
+
+-??? 이해 안가는것 ???
+- qsub -q all.q 4_Tina_adni_reg_nor_RSedits_12_22_24_subj4111_6000_troubleshoot.sh을 돌렸는데 
+이것은 qsub -q all.q 4_Tina_adni_reg_nor_RSedits_12_22_24_subj4111_6000_troubleshoot.sh 스크립트를 돌리고 이 스크립트는 output folder 를
+export SUBJECTS_DIR="//ibic/scratch/royseo_workingdir/normalized2mni152_1mm_subj4111_6000_troubleshoot 이렇게 지정함
+그래서 normalized2mni152_1mm_subj4111_6000_troubleshoot를 만들어놨는데 거기에 output이 저장되는 것이 아니고 normalized2mni152_1mm 폴더를 만들어 거기에 저장되고 있음
+
+
+
+

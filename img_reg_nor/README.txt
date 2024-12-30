@@ -59,6 +59,35 @@ scp royseo@adrc.ibic.washington.edu:/ibic/scratch/royseo_workingdir/scripts/{4_T
 export SUBJECTS_DIR="//ibic/scratch/royseo_workingdir/normalized2mni152_1mm_subj4111_6000_troubleshoot 이렇게 지정함
 그래서 normalized2mni152_1mm_subj4111_6000_troubleshoot를 만들어놨는데 거기에 output이 저장되는 것이 아니고 normalized2mni152_1mm 폴더를 만들어 거기에 저장되고 있음
 
+6. 12/30/24
+- 12/29/24일날 만들어 두었던 2 files: 
+  1. 4_Tina_adni_reg_nor_RSedits_12_30_24_subj12001_18000.sh
+  2. subj_list_ADNI1234_28001_12001-18000.log 
+  을 돌렸음
+- normalize2mni152_1mm 폴더를 normalize2mni152_1mm_6001-12000wo12 로 이름을 바꿈
+- normalize2mni152_1mmwo12는 12개의 subj folders가 folders는 있으나 brain.mgz가 만들어지지 않았기 때문에
+  그 다음 단계인 mni152_1mm로 normalize되는 것도 되지 않았음
+- 그 12개의 folders:
+
+021_S_0984_2014-12-09_S24277_I467254 not complete
+023_S_0625_2007-07-16_S35036_I73330 not complete
+023_S_0625_2008-01-11_S44497_I90886 not complete
+023_S_0625_2008-01-11_S44498_I90882 not complete
+023_S_0625_2008-09-29_S56786_I124075 not complete
+023_S_0625_2008-09-29_S56787_I124080 not complete
+027_S_0644_2012-07-02_S15633_I334521 not complete
+027_S_4964_2012-10-06_S17005_I358248 not complete
+031_S_0294_2007-09-25_S40106_I79604 not complete
+031_S_0618_2006-06-06_S15271_I67110 not complete
+031_S_0618_2007-07-02_S36607_I72188 not complete
+033_S_0513_2007-05-31_S33069_I67706 not complete
 
 
 
+- 한국시간 12/30/24 월요일 낮 12:05분에 다음을 submitted!
+  qsub -q all.q 4_Tina_adni_reg_nor_RSedits_12_30_24_subj12001_18000.sh
+- qstat -u royseo 해 본 결과 qsub이 잘 submitted 된 것을 확인
+- 182개의 폴더가 바로 생겼음 (Does it mean that qsub commend recruit 182 cores or 
+  one core recruits can make a few folders simultaneously?) 
+
+- 그 전에 돌린 60001-12000 subjects 중 다음의 12개 subjects는 brain.mgz가 만들어지지 않았음

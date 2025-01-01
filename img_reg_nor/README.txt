@@ -95,5 +95,12 @@ export SUBJECTS_DIR="//ibic/scratch/royseo_workingdir/normalized2mni152_1mm_subj
 7. 1/1/25
 - 아직 4_Tina_adni_reg_nor_RSedits_12_30_24_subj12001_18000.sh 파일이 다 돌지는 않았음
 - Next two files 만듦
-1. subj_list_ADNI1234_28001_18001-28001.log 
-2. 4_Tina_adni_reg_nor_RSedits_01_09_25_subj18001_28001.sh
+    1. subj_list_ADNI1234_28001_18001-28001.log 
+    2. 4_Tina_adni_reg_nor_RSedits_01_09_25_subj18001_28001.sh
+
+8. 1/2/25
+- 12/22/24:  seoroy15@gmail.com 김대진 박사님이 fnirt을 HCP parameters를 참고하여 해보는게 어떻냐고 하셔서 
+- https://github.com/Washington-University/HCPpipelines/blob/master/PreFreeSurfer/PreFreeSurferPipeline.sh 사용하여 fnirt을 시도함
+- claude project names: adni-cnn-normalization
+- fnirt을 위해 만든 script: 3-4-fnirt-nonlinear-HCP-param.sh
+

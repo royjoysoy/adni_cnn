@@ -30,7 +30,8 @@ fnirt --in=${input_file} \
       --iout=${output_dir}/warped_brain.nii.gz \
       --cout=${output_dir}/warp_coef.nii.gz \
       --fout=${output_dir}/warp_field.nii.gz \
-      --jout=${output_dir}/jacobian.nii.gz
+      --jout=${output_dir}/jacobian.nii.gz \
+      --verbose      
 
 # Generate inverse warp
 invwarp --ref=${input_file} \

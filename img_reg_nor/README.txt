@@ -91,3 +91,9 @@ export SUBJECTS_DIR="//ibic/scratch/royseo_workingdir/normalized2mni152_1mm_subj
   one core recruits can make a few folders simultaneously?) 
 
 - 그 전에 돌린 60001-12000 subjects 중 다음의 12개 subjects는 brain.mgz가 만들어지지 않았음
+
+7. 1/1/25
+- 아직 4_Tina_adni_reg_nor_RSedits_12_30_24_subj12001_18000.sh 파일이 다 돌지는 않았음
+- Next two files 만듦
+1. subj_list_ADNI1234_28001_18001-28001.log 
+2. 4_Tina_adni_reg_nor_RSedits_01_09_25_subj18001_28001.sh

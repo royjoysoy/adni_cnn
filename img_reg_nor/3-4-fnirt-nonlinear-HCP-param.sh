@@ -15,7 +15,8 @@ export PATH=${FSLDIR}/bin:${PATH}
 
 # Directory and file setup
 input_dir="../fnirt_HCP_param_test"
-input_file="${input_dir}/033_S_1098_2014-12-16_S36617_I771127_brain_mni152_1mm.nii.gz"
+#input_file="${input_dir}/033_S_1098_2014-12-16_S36617_I771127_brain_mni152_1mm.nii.gz" first tested out
+input_file="${input_dir}/041_S_0125_2010-03-02_S80746_I203717_brain_mni152_1mm.nii.gz"
 output_dir="${input_dir}/fnirt_output"
 mkdir -p ${output_dir}
 

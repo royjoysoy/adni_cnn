@@ -104,3 +104,9 @@ export SUBJECTS_DIR="//ibic/scratch/royseo_workingdir/normalized2mni152_1mm_subj
 - claude project names: adni-cnn-normalization
 - fnirt을 위해 만든 script: 3-4-fnirt-nonlinear-HCP-param.sh
 
+9. 1/3/25
+- 3-4-fnirt-nonlinear-HCP-param-batch-processing.sh: 
+  1. chaged output directory (fnirt_output -> normalized2mni152_1mm/subject각자/mni152_1mm 로 바꿈)
+  2. error logging files 이름에 qsub task ID와 subjectID 를 같이 넣음 
+- 4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs.sh
+  3-4-fnirt-nonlinear-HCP-param-batch-processing.sh의 2번째꺼를 고치면서 fnirt_output 폴더 만드는 부분 없앰

@@ -110,3 +110,25 @@ export SUBJECTS_DIR="//ibic/scratch/royseo_workingdir/normalized2mni152_1mm_subj
   2. error logging files 이름에 qsub task ID와 subjectID 를 같이 넣음 
 - 4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs.sh
   3-4-fnirt-nonlinear-HCP-param-batch-processing.sh의 2번째꺼를 고치면서 fnirt_output 폴더 만드는 부분 없앰
+
+10. 1/4/25
+- 1-10 subjects돌려보고 잘되면 11-6000subject qsub으로 돌릴 5개의 파일들 만들음 
+- normalized2mni152_1mm_11-6000 폴더 만들고, 
+    normalized2mni152_1mm_11-110,
+    normalized2mni152_1mm_111-4110,
+    normalized2mni152_1mm_4111-6000wo11 이 세 폴더에서 subjects 폴더들 다 모았음
+참고로 normalized2mni152_1mm_4111-6000wo11 폴더에는 4111-6000까지 다 있다. 11개가 error 나서 brain.mgz파일부터 생성이 안되었지만, subjects 폴더는 다 있다. 
+- 1-10: 
+  1.3-4-fnirt-nonlinear-HCP-param-batch-processing-1-10.sh
+  2. 4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs-1-10.sh
+   log file은 이미 있던 것  subj_list_ADNI1234_28001_1-10.log 사용
+- 11-6000:
+  3. 3-4-fnirt-nonlinear-HCP-param-batch-processing-11-6000.sh  
+  4. 4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs-11-6000.sh
+  5. subj_list_ADNI1234_28001_11-6000_fnirt.log
+
+
+
+
+
+

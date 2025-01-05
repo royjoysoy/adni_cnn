@@ -61,7 +61,7 @@ def create_matched_dataset():
     df = df.drop('sort_order', axis=1)
     
     # Save to new CSV file
-    df.to_csv('/Users/test_terminal/Desktop/adni_cnn/behavioral/adni_1234_28002_dx_age_sex_acqdate.csv', index=False)
+    df.to_csv('/Users/test_terminal/Desktop/adni_cnn/behavioral/4-adni_1234_28002_dx_age_sex_acqdate.csv', index=False)
     
     # Print some statistics
     print(f"Total rows in output CSV: {len(df)}")

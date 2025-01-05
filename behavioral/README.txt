@@ -14,4 +14,4 @@
    from 'subj_list_28001_raw_prac.log'
 - Reordering the resulting dataset to match the order of subjects in the log file : 이것은 내가 recon-all 하고 나서 그때그때 보내기 싶게하기위해서 
   즉, 오늘 6001-12000까지 즉 6000개의 subjects가 recon-all 을 마쳤고 rsync 할 수 있게 되었다면 6001-12000 subjects 개 .log file 순서와 같은 순서로 adni_1234_28002_df.csv 에도 있다.
-- Creating a new CSV file 'adni_1234_28002_df.csv' with the combined data
+- Creating a new CSV file '4-adni_1234_28002_dx_age_sex_acqdate.csv' with the combined data

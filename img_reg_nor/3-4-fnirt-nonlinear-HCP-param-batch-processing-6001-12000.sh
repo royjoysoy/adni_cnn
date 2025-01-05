@@ -4,12 +4,13 @@
 # It processes multiple subjects in parallel using SGE's qsub system.
 # This script is based on 3-4-fnirt-nonlinear-HCP-param.sh but modified for qsub batch processing to handle multiple subjects
 # 01-03-2025 : Modified to save outputs in the same directory as input files (/mni152_1mm)
-# 01-04-2025 : the first 10 subjects
+# 01-04-2025 : the subjects 11-6000
+# 01-06-2025 : the subjects 6001-12000 
 
 #$ -S /bin/bash
 #$ -N fnirt_job
 #$ -V
-#$ -t 1-10
+#$ -t 1-6000
 #$ -cwd
 #$ -o fnirt_stdout/$JOB_NAME.$TASK_ID.stdout
 #$ -e fnirt_stderr/$JOB_NAME.$TASK_ID.stderr
@@ -22,11 +23,11 @@ export PATH=${FSLDIR}/bin:${PATH}
 
 # Directory setup
 BASE_DIR="/ibic/scratch/royseo_workingdir"
-INPUT_BASE="${BASE_DIR}/normalized2mni152_1mm_1-10"
+INPUT_BASE="${BASE_DIR}/normalized2mni152_1mm_6001-12000wo12"
 SCRIPT_DIR="${BASE_DIR}/scripts"
 
 # Get subject identifier from the list file
-subject=$(sed -n -e "${SGE_TASK_ID}p" "${SCRIPT_DIR}/subj_list_ADNI1234_28001_1-10.log")
+subject=$(sed -n -e "${SGE_TASK_ID}p" "${SCRIPT_DIR}/subj_list_ADNI1234_28001_6001-12000.log")
 
 # Create symbolic links with both task ID and subject ID
 ln -sf $JOB_NAME.$TASK_ID.stdout fnirt_stdout/$JOB_NAME.task${TASK_ID}_${subject}.stdout
@@ -80,6 +81,4 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "FNIRT registration complete for subject: ${subject_base}"
-
-
 

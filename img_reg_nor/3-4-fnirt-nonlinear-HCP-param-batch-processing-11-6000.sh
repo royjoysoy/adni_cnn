@@ -29,12 +29,13 @@ SCRIPT_DIR="${BASE_DIR}/scripts"
 subject=$(sed -n -e "${SGE_TASK_ID}p" "${SCRIPT_DIR}/subj_list_ADNI1234_28001_11-6000_fnirt.log")
 
 # Create symbolic links with both task ID and subject ID
-ln -sf fnirt_stdout/$JOB_NAME.$TASK_ID.stdout fnirt_stdout/$JOB_NAME.task${TASK_ID}_${subject}.stdout
-ln -sf fnirt_stderr/$JOB_NAME.$TASK_ID.stderr fnirt_stderr/$JOB_NAME.task${TASK_ID}_${subject}.stderr
+ln -sf $JOB_NAME.$TASK_ID.stdout fnirt_stdout/$JOB_NAME.task${TASK_ID}_${subject}.stdout
+ln -sf $JOB_NAME.$TASK_ID.stderr fnirt_stderr/$JOB_NAME.task${TASK_ID}_${subject}.stderr
 
 # Define the input/output directory structure
-subject_dir="${INPUT_BASE}/${subject}/mni152_1mm"
-input_file="${subject_dir}/${subject}_brain_mni152_1mm.nii.gz"
+subject_base=$(echo "${subject}" | sed 's/\.nii$//')
+subject_dir="${INPUT_BASE}/${subject_base}/mni152_1mm"
+input_file="${subject_dir}/${subject_base}_brain_mni152_1mm.nii.gz"
 
 # Use FSL's standard T1_2_MNI152_2mm config
 fnirtconfig="${FSLDIR}/etc/flirtsch/T1_2_MNI152_2mm.cnf" 
@@ -55,30 +56,28 @@ fnirt --in=${input_file} \
       --ref=$FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz \
       --refmask=$FSLDIR/data/standard/MNI152_T1_1mm_brain_mask.nii.gz \
       --config=${fnirtconfig} \
-      --iout=${subject_dir}/${subject}_warped_brain.nii.gz \
-      --cout=${subject_dir}/${subject}_warp_coef.nii.gz \
-      --fout=${subject_dir}/${subject}_warp_field.nii.gz \
-      --jout=${subject_dir}/${subject}_jacobian.nii.gz \
+      --iout=${subject_dir}/${subject_base}_warped_brain.nii.gz \
+      --cout=${subject_dir}/${subject_base}_warp_coef.nii.gz \
+      --fout=${subject_dir}/${subject_base}_warp_field.nii.gz \
+      --jout=${subject_dir}/${subject_base}_jacobian.nii.gz \
       --verbose
 
 # Check if FNIRT completed successfully
 if [ $? -ne 0 ]; then
-    echo "ERROR: FNIRT failed for subject: ${subject}"
+    echo "ERROR: FNIRT failed for subject: ${subject_base}"
     exit 1
 fi
 
 # Generate inverse warp
 invwarp --ref=${input_file} \
-        --warp=${subject_dir}/${subject}_warp_coef.nii.gz \
-        --out=${subject_dir}/${subject}_inv_warp.nii.gz
+        --warp=${subject_dir}/${subject_base}_warp_coef.nii.gz \
+        --out=${subject_dir}/${subject_base}_inv_warp.nii.gz
 
 # Check if invwarp completed successfully
 if [ $? -ne 0 ]; then
-    echo "ERROR: Inverse warp generation failed for subject: ${subject}"
+    echo "ERROR: Inverse warp generation failed for subject: ${subject_base}"
     exit 1
 fi
 
-echo "FNIRT registration complete for subject: ${subject}"
-
-
+echo "FNIRT registration complete for subject: ${subject_base}"
 

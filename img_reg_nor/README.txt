@@ -127,6 +127,31 @@ export SUBJECTS_DIR="//ibic/scratch/royseo_workingdir/normalized2mni152_1mm_subj
   4. 4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs-11-6000.sh
   5. subj_list_ADNI1234_28001_11-6000_fnirt.log
 
+11. 1/6/25
+- fnirt 1-10, 11-6000까지 돌렸음 새벽 2:30분쯤 시작해서 그 다음날 저녁 6:00좀 넘어서 끝났음)
+- fnirt중에 error 난 것들 (1-10까지는 에러 없고, 11-6000까지는 에러 있음)
+016_5_0702 2013-05-09_518903_1377040 not complete
+021_5_0337_2012-04-24_S14825_I327057 not complete
+021_5_0337_2012-04-24_S14825_I327059 not complete
+021_5_0337_2012-04-24_S14825_I327062 not complete
+021_5_0337_2012-04-24_S14825_I327074 not complete
+021_5_0337_2013-05-07_S18878_1389140 not complete
+021_5_0337_2013-05-07_S18879_I389138 not complete
+021_5_0337_2014-04-24_S21696_I432139 not complete
+021_5_0337_2014-04-24_S21696_I432140 not complete
+021_5_0337_2015-05-07_S25882_I510022 not complete
+021_5_0337_2015-05-07_S25882_I510051 not complete
+
+- fnirt 6000-12000까지 돌리기 시작함 6:15pm 아래 두개의 파일로
+  1. 3-4-fnirt-nonlinear-HCP-param-batch-processing-6001-12000.sh
+  2. 4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs-6001-12000.sh
+
+- fnirt 12001-18000 돌릴 파일 만들었음 
+  1. 3-4-fnirt-nonlinear-HCP-param-batch-processing-12001-18000.sh
+  2. 4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs-12001-18000.sh
+ 
+
+
 
 
 

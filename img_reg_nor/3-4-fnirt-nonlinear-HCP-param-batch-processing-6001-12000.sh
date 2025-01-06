@@ -12,8 +12,8 @@
 #$ -V
 #$ -t 1-6000
 #$ -cwd
-#$ -o fnirt_stdout/$JOB_NAME.$TASK_ID.stdout
-#$ -e fnirt_stderr/$JOB_NAME.$TASK_ID.stderr
+#$ -o fnirt_stdout_6001-12000/$JOB_NAME.$TASK_ID.stdout
+#$ -e fnirt_stderr_6001-12000/$JOB_NAME.$TASK_ID.stderr
 
 
 # Setup FSL
@@ -30,8 +30,8 @@ SCRIPT_DIR="${BASE_DIR}/scripts"
 subject=$(sed -n -e "${SGE_TASK_ID}p" "${SCRIPT_DIR}/subj_list_ADNI1234_28001_6001-12000.log")
 
 # Create symbolic links with both task ID and subject ID
-ln -sf $JOB_NAME.$TASK_ID.stdout fnirt_stdout/$JOB_NAME.task${TASK_ID}_${subject}.stdout
-ln -sf $JOB_NAME.$TASK_ID.stderr fnirt_stderr/$JOB_NAME.task${TASK_ID}_${subject}.stderr
+ln -sf $JOB_NAME.$TASK_ID.stdout fnirt_stdout_6001-12000/$JOB_NAME.task${TASK_ID}_${subject}.stdout
+ln -sf $JOB_NAME.$TASK_ID.stderr fnirt_stderr_6001-12000/$JOB_NAME.task${TASK_ID}_${subject}.stderr
 
 # Define the input/output directory structure
 subject_base=$(echo "${subject}" | sed 's/\.nii$//')

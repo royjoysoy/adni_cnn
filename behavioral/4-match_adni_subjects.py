@@ -5,19 +5,9 @@ This script combines and reorganizes ADNI subject data by:
 1. Taking a CSV file downloaded from ADNI ('ADNI_1_2_3_4_11_14_24_1_02_2025.csv')
 2. Adding the full image filenames as the first column by matching Image Data IDs 
    from 'subj_list_28001_raw_prac.log'
-3. Reordering the resulting dataset to match the order of subjects in the log file
-4. Creating a new CSV file 'adni_1234_28002_df.csv' with the combined data
-
-l
-
-Input files required:
-- ADNI_1_2_3_4_11_14_24_1_02_2025.csv: Subject information from ADNI database
-- subj_list_28001_raw_prac.log: List of image filenames
-
-Output:
-- adni_1234_28002_df.csv: Combined dataset with image filenames and subject information
-
-Later, the output file is going to use a csv file that has image file path.
+3. Adding '_warped_brain' before '.nii' and changing extension to '.nii.gz'
+4. Reordering the resulting dataset to match the order of subjects in the log file
+5. Creating a new CSV file 'adni_1234_28002_df.csv' with the combined data
 """
 import pandas as pd
 import re
@@ -28,6 +18,12 @@ def extract_image_id(filename):
     if match:
         return match.group(0).replace('.nii', '')
     return None
+
+def modify_filename(filename):
+    """Add '_warped_brain' before '.nii' and change extension to '.nii.gz'"""
+    if filename:
+        return filename.replace('.nii', '_warped_brain.nii.gz')
+    return ''
 
 def create_matched_dataset():
     # Read the log file
@@ -44,18 +40,18 @@ def create_matched_dataset():
     # Read the CSV file
     df = pd.read_csv('/Users/test_terminal/Desktop/adni_cnn/behavioral/ADNI_1_2_3_4_11_14_24_1_02_2025.csv')
     
-    # Create a new column for the full filename
+    # Create a new column for the full filename and modify it
     df['Full_Filename'] = df['Image Data ID'].map(lambda x: image_id_to_filename.get(x, ''))
+    df['Full_Filename'] = df['Full_Filename'].apply(modify_filename)
     
     # Reorder columns to put Full_Filename first
     cols = ['Full_Filename'] + [col for col in df.columns if col != 'Full_Filename']
     df = df[cols]
     
     # Create a dictionary for ordering based on log file
-    order_dict = {filename: idx for idx, filename in enumerate(log_files)}
+    order_dict = {modify_filename(filename): idx for idx, filename in enumerate(log_files)}
     
     # Sort the dataframe based on the log file order
-    # Note: Rows with filenames not in log file will go to the end
     df['sort_order'] = df['Full_Filename'].map(lambda x: order_dict.get(x, float('inf')))
     df = df.sort_values('sort_order')
     df = df.drop('sort_order', axis=1)

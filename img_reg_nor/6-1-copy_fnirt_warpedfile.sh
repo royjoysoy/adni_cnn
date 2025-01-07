@@ -23,6 +23,8 @@ while IFS= read -r subject; do
         cp "${src_file}" "${dst_file}"
     fi
     
-done < <(head -n 2990 "/ibic/scratch/royseo_workingdir/scripts/subj_list_ADNI1234_28001_11-6000_fnirt.log")
+#done < <(head -n 2990 "/ibic/scratch/royseo_workingdir/scripts/subj_list_ADNI1234_28001_11-6000_fnirt.log")
+# the rest of them
+done < <(tail -n +2991 "/ibic/scratch/royseo_workingdir/scripts/subj_list_ADNI1234_28001_11-6000_fnirt.log") 
 
 echo "Copy process complete"

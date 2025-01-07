@@ -11,7 +11,7 @@
 #$ -S /bin/bash
 #$ -N fnirt_job
 #$ -V
-#$ -t 12001-18000
+#$ -t 1-6000
 #$ -cwd
 #$ -o fnirt_stdout_12001-18000/$JOB_NAME.$TASK_ID.stdout
 #$ -e fnirt_stderr_12001-18000/$JOB_NAME.$TASK_ID.stderr
@@ -27,6 +27,9 @@ BASE_DIR="/ibic/scratch/royseo_workingdir"
 INPUT_BASE="${BASE_DIR}/normalized2mni152_1mm_12001-18000wo1"
 SCRIPT_DIR="${BASE_DIR}/scripts"
 
+# Debug line for subject list file
+echo "Reading subject from: ${SCRIPT_DIR}/subj_list_ADNI1234_28001_12001-18000.log"
+
 # Get subject identifier from the list file
 subject=$(sed -n -e "${SGE_TASK_ID}p" "${SCRIPT_DIR}/subj_list_ADNI1234_28001_12001-18000.log")
 
@@ -36,8 +39,21 @@ ln -sf $JOB_NAME.$TASK_ID.stderr fnirt_stderr_12001-18000/$JOB_NAME.task${TASK_I
 
 # Define the input/output directory structure
 subject_base=$(echo "${subject}" | sed 's/\.nii$//')
-subject_dir="${INPUT_BASE}/${subject_base}/mni152_1mm"
-input_file="${subject_dir}/${subject_base}_brain_mni152_1mm.nii.gz"
+# Clean up any potential double slashes and ensure proper path construction
+subject_dir=$(echo "${INPUT_BASE}/${subject_base}/mni152_1mm" | sed 's#//#/#g')
+input_file=$(echo "${subject_dir}/${subject_base}_brain_mni152_1mm.nii.gz" | sed 's#//#/#g')
+
+# Add debug output
+echo "subject: ${subject}"
+echo "subject_base: ${subject_base}"
+echo "subject_dir: ${subject_dir}"
+echo "input_file: ${input_file}"
+
+# Add directory existence check
+if [ ! -d "${subject_dir}" ]; then
+    echo "ERROR: Subject directory does not exist: ${subject_dir}"
+    exit 1
+fi
 
 # Use FSL's standard T1_2_MNI152_2mm config
 fnirtconfig="${FSLDIR}/etc/flirtsch/T1_2_MNI152_2mm.cnf" 

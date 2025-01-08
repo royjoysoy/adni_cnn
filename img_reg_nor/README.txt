@@ -149,6 +149,18 @@ export SUBJECTS_DIR="//ibic/scratch/royseo_workingdir/normalized2mni152_1mm_subj
 - fnirt 12001-18000 돌릴 파일 만들었음 
   1. 3-4-fnirt-nonlinear-HCP-param-batch-processing-12001-18000.sh
   2. 4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs-12001-18000.sh
+
+12. 1/7/25 
+-  1. 3-4-fnirt-nonlinear-HCP-param-batch-processing-6001-12000.sh;   4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs-6001-12000.sh
+이 두 파일 다 돌아 갔음 10:34 am쯤
+- 1. 3-4-fnirt-nonlinear-HCP-param-batch-processing-12001-18000.sh;   4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs-12001-18000.sh
+이 두 파일 돌리기 시작 1:00pm 쯤
+
+
+  13. 1/8/25
+  -   qsub -q all.q 4_Tina_adni_reg_nor_RSedits_01_08_25_subj18001_28001.sh  
+  10:51pm돌리기 시작
+      
  
 
 

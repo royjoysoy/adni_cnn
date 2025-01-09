@@ -157,10 +157,95 @@ export SUBJECTS_DIR="//ibic/scratch/royseo_workingdir/normalized2mni152_1mm_subj
 이 두 파일 돌리기 시작 1:00pm 쯤
 
 
-  13. 1/8/25
+13. 1/8/25
   -   qsub -q all.q 4_Tina_adni_reg_nor_RSedits_01_08_25_subj18001_28001.sh  
   10:51pm돌리기 시작
       
+14. 1/9/25
+*** Important ****
+Error 정리
+ - 1. 28002개 다운 받음
+   - 로그인 후 https://ida.loni.usc.edu/pages/access/search.jsp?project=ADNI&tab=collection&page=SEARCH&subPage=NEW_ADV_QUERY 
+          - 위의 주소는 Search & Download -> Advanced Image Search -> Data Collections -> My Collections + -> ADNI_1_2_3_4_11/14/24(28002) 하면 나오는 곳
+    -CSV: raw: /adni_cnn/behavioral/raw_28002_ADNI_1_2_3_4_11_14_24_1_08_2025.csv  
+          - 위의 파일은 , Subject, Group (initial visit dx, 그래서 dx가 visit이 바뀌어도 변하지 않는다, 
+                       Sex, Age, Visit (sc: screening, m: month, bl: baseline, v:찾아봐야함), Modality)
+                       Description, Type, Acq Date, Format, Downloaded 가 있는데 다운받으면 Image Data ID 칼럼도 생김
+    
+ - 2. /ibic/scratch/ADNI (1189의 subject folders, Tina가 Download해줌) 
+        /ibic/scratch/royseo_workingdir/raw (28002개의 images: 1189개의 subjects 폴더에서 이미지만 꺼내어 정리)
+
+ - 3. flirt한 결과
+      /ibic/scratch/royseo_workingdir/normalized2mni152_1mm_1-10:          (n = 10    | image (n = 10)) 
+      /ibic/scratch/royseo_workingdir/normalized2mni152_1mm_11-110:        (n = 101   | image (n = 100) + errorlog (n = 1))
+      /ibic/scratch/royseo_workingdir/normalized2mni_1mm_111-4110:         (n = 4000  | image (n = 4000))
+      /ibic/scratch/royseo_workingdir/normalized2mni152_1mm_4111_6000wo11: (n = 1890  | image (n = 1890)): file 이름에 'wo11'이 헷갈릴 수 있는데 error가 난 11개의 폴더도 포함되어있다. 'wo11'은 에러난 11개 폴더안에 최종 파일인 "....brain_mni152_1mm.nii.gz" 에러가 나서 안생겼다는 뜻
+            1  016_S_0702_2013-05-09_S18903_I377040 not complete
+            2  021_S_0337_2012-04-24_S14825_I327057 not complete
+            3  021_S_0337_2012-04-24_S14825_I327059 not complete
+            4  021_S_0337_2012-04-24_S14825_I327062 not complete
+            5  021_S_0337_2012-04-24_S14825_I327074 not complete
+            6  021_S_0337_2013-05-07_S18878_I389140 not complete
+            7  021_S_0337_2013-05-07_S18879_I389138 not complete
+            8  021_S_0337_2014-04-24_S21696_I432139 not complete
+            9  021_S_0337_2014-04-24_S21696_I432140 not complete
+            10 021_S_0337_2015-05-07_S25882_I510022 not complete
+            11 021_S_0337_2015-05-07_S25882_I510051 not complete
+
+      /ibic/scratch/royseo_workingdir/normalized2mni152_1mm_6001_12000wo12 (n = 6000  | image (n = 6000)): file 이름에 'wo12'이 헷갈릴 수 있는데 error가 난 11개의 폴더도 포함되어있다. 'wo12'은 에러난 12개 폴더안에 최종 파일인 "....brain_mni152_1mm.nii.gz" 에러가 나서 안생겼다는 뜻
+            1  021_S_0984_2014-12-09_524277_I467254 not complete
+            2  023_S_0625_2007-07-16_535036_173330 not complete
+            3  023_S_0625_2008-01-11_544497_190886 not complete
+            4  023_S_0625_2008-01-11_544498_190882 not complete
+            5  023_S_0625_2008-09-29_556786_I124075 not complete
+            6  023_S_0625_2008-09-29_556787_I124080 not complete
+            7  027_S_0644_2012-07-02_S15633_I334521 not complete
+            8  027_S_4964_2012-10-06_S17005_I358248 not complete
+            9  031_S_0294_2007-09-25_540106_I79604 not complete
+            10 031_S_0618_2006-06-06_S15271_I67110 not complete
+            11 031_S_0618_2007-07-02_536607_I72188 not complete
+            12 033_S_0513_2007-05-31_S33069_I67706 not complete
+
+      /ibic/scratch/royseo_workingdir/normalized2mni152_1mm_12001_18000wo1 (n = 6000  | image (n = 6000)): file 이름에 'wo1'이 헷갈릴 수 있는데 error가 난 1개의 폴더도 포함되어있다. 'wo1'은 에러난 1개 폴더안에 최종 파일인 "....brain_mni152_1mm.nii.gz" 에러가 나서 안생겼다는 뜻
+                                                                                                           그 이전 단계인 mri폴더 안에 brain.mgz도 잘 안생김
+            1 033_S_1016_2016-11-01_S51667_I1051043 not complete
+
+      /ibic/scratch/royseo_workingdir/normalized2mni152_1mm_18001_28000: 1/9 1:45분 현재 9% 돌아감
+
+
+  - 4. fnirt한 결과
+      /ibic/scratch/royseo_workingdir/normalized2mni152_1mm_1-10                (n = 10    | image (n = 10)) 
+      /ibic/scratch/royseo_workingdir/normalized2mni152_1mm_11-6000_fnirt_wo11  (n = 5991  | image (n = 5990) + errorlog (n = 1)): 'wo11' 관한 설명 위 flirt 참조
+            1  016_S_0702_2013-05-09_S18903_I377040 not complete
+            2  021_S_0337_2012-04-24_S14825_I327057 not complete
+            3  021_S_0337_2012-04-24_S14825_I327059 not complete
+            4  021_S_0337_2012-04-24_S14825_I327062 not complete
+            5  021_S_0337_2012-04-24_S14825_I327074 not complete
+            6  021_S_0337_2013-05-07_S18878_I389140 not complete
+            7  021_S_0337_2013-05-07_S18879_I389138 not complete
+            8  021_S_0337_2014-04-24_S21696_I432139 not complete
+            9  021_S_0337_2014-04-24_S21696_I432140 not complete
+            10 021_S_0337_2015-05-07_S25882_I510022 not complete
+            11 021_S_0337_2015-05-07_S25882_I510051 not complete
+
+      /ibic/scratch/royseo_workingdir/normalized2mni152_1mm_6001-12000_wo12 (n = 6000  | image (n = 6000)): 'wo12' 관한 설명 위 flirt 참조
+            1  021_S_0984_2014-12-09_S24277_I467254 not complete
+            2  023_S_0625_2007-07-16_S35036_I73330 not complete
+            3  023_S_0625_2008-01-11_S44497_I90886 not complete
+            4  023_S_0625_2008-01-11_S44498_I90882 not complete
+            5  023_S_0625_2008-09-29_S56786_I124075 not complete
+            6  023_S_0625_2008-09-29_S56787_I124080 not complete
+            7  027_S_0644_2012-07-02_S15633_I334521 not complete
+            8  027_S_4964_2012-10-06_S17005_I358248 not complete
+            9  031_S_0294_2007-09-25_S40106_I79604 not complete
+            10 031_S_0618_2006-06-06_S15271_I67110 not complete
+            11 031_S_0618_2007-07-02_S36607_I72188 not complete
+            12 033_S_0513_2007-05-31_S33069_I67706 not complete
+
+      /ibic/scratch/royseo_workingdir/normalized2mni152_1mm_12001-18000wo1/ (n = 6000): 'wo1' 관한 설명 위 flirt 참조
+            1 033_S_1016_2016-11-01_S51667_I1051043 not complete
+      
+          
  
 
 

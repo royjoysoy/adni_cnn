@@ -245,6 +245,11 @@ Error 정리
       /ibic/scratch/royseo_workingdir/normalized2mni152_1mm_12001-18000wo1/ (n = 6000): 'wo1' 관한 설명 위 flirt 참조
             1 033_S_1016_2016-11-01_S51667_I1051043 not complete
       
+    15. 1-12-2025
+    - 1-10-2025일에 6-1-copy_fnirt_warpedfiled.sh를 약간 수정하고 6-2-copy_flirt_brain_mni152_1mm.sh라는 스크립트로 flirt을 첫 18000subjects out of 28002를 두개의 폴더로 옮겼음
+    - normalization에서 flirt이 fnirt보다 앞서지만 copy를 시작한 파일이 fnirt파일이라 6
+      - 1_linear_1-6000
+      - 2_linear_6001-8000
           
  
 

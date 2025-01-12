@@ -246,11 +246,135 @@ Error 정리
             1 033_S_1016_2016-11-01_S51667_I1051043 not complete
       
     15. 1-12-2025
-    - 1-10-2025일에 6-1-copy_fnirt_warpedfiled.sh를 약간 수정하고 6-2-copy_flirt_brain_mni152_1mm.sh라는 스크립트로 flirt을 첫 18000subjects out of 28002를 두개의 폴더로 옮겼음
-    - normalization에서 flirt이 fnirt보다 앞서지만 copy를 시작한 파일이 fnirt파일이라 6
+    - 1-10-2025일에 6-1-copy_fnirt_warpedfiled.sh를 약간 수정하고 6-2-copy_flirt_brain_mni152_1mm.sh라는 스크립트로 flirt을 첫 18000subjects out of 28002를 flirt 두개 fnirt 2개의 폴더로 옮겼음
+          - normalization에서 flirt이 fnirt보다 앞서지만 copy를 시작한 파일이 fnirt파일이라 6-1이 fnirt copy이고 6-2가 flirt copy임 
       - 1_linear_1-6000
-      - 2_linear_6001-8000
+      - 2_linear_6001-12000
+      - 1_nonlinear_1-6000
+      - 2_nonlinear_6001-12000
+
+       '''   
+       (base) royseo@adrc:/ibic/scratch/royseo_workingdir/scripts$ ls ../1_linear_1-6000 |wc -l
+       5987
+       (base) royseo@adrc:/ibic/scratch/royseo_workingdir/scripts$ ls ../1_nonlinear_1-6000 |wc -l
+       5989
+       (base) royseo@adrc:/ibic/scratch/royseo_workingdir/scripts$ ls ../2_linear_6001-18000 |wc -l
+        11985
+       (base) royseo@adrc:/ibic/scratch/royseo_workingdir/scripts$ ls ../2_nonlinear_6001-18000 |wc -l
+        11985
+      '''
+
+    - 위의 결과 flirt, fnirt결과를 보면 flirt에서 에러나서 (아니면 flirt 이전에 recon-all에서 에러나서) fnirt processing을 못한 subjects들이 에러의 전부이다 
+      1-10:        에러가 없고, 
+      11-6000:     에러 11개
+      6001-12000:  에러 12개
+      12001-18000: 에러 1개 
+      그런데 파일 개수를 세보면 에러나서 없는 파일의 수랑 일치하지 않는데
+
+              '''   
+              (base) royseo@adrc:/ibic/scratch/royseo_workingdir/scripts$ ls ../1_linear_1-6000 |wc -l
+              5987 왜 에러가 11개가 아니고 13개나 되지?
+              (base) royseo@adrc:/ibic/scratch/royseo_workingdir/scripts$ ls ../1_nonlinear_1-6000 |wc -l
+              5989 에러가 11개 okay
+              (base) royseo@adrc:/ibic/scratch/royseo_workingdir/scripts$ ls ../2_linear_6001-18000 |wc -l
+              11985 왜 에러가 15개나 되지? (12+1=  13개가 아니고)
+              (base) royseo@adrc:/ibic/scratch/royseo_workingdir/scripts$ ls ../2_nonlinear_6001-18000 |wc -l
+              11985 왜 에러가 15개나 되지? (12+1=  13개가 아니고)
+              '''
+    - 7-find_missing_files.sh의 결과
+
+                ------------------------------------------------------------------------------------------------------------------------------------------------
+First:  왜 linear 에서는 13개 없고 non linear에서는 11개가 없나 ####로 표시해둔 1번, 13번 2개의 파일 둘다 각자의
+        원래 폴더 (../normalized2mni_1mm_111-4110/013_S_1276_2007-03-28_S29149_I71396/mni152_1mm)
+                (../normalized2mni152_1mm_4111-6000wo11/021_S_0753_2006-08-04_S17579_I33673/mni152_1mm)
+        에는 있는데 복사가 되지 않아있었다. 
+                 ---- LINEAR ----
+                Checking subj_list_ADNI1234_28001_11-6000_fnirt.log against directory ../1_linear_1-6000
+                ------------------------------------------------
+                1  Missing: 013_S_1276_2007-03-28_S29149_I71396_brain_mni152_1mm.nii.gz #### 찾았음 복사해서 1_linear_1-6000으로 옮김
+                2  Missing: 016_S_0702_2013-05-09_S18903_I377040_brain_mni152_1mm.nii.gz
+                3  Missing: 021_S_0337_2012-04-24_S14825_I327057_brain_mni152_1mm.nii.gz
+                4  Missing: 021_S_0337_2012-04-24_S14825_I327059_brain_mni152_1mm.nii.gz
+                5  Missing: 021_S_0337_2012-04-24_S14825_I327062_brain_mni152_1mm.nii.gz
+                6  Missing: 021_S_0337_2012-04-24_S14825_I327074_brain_mni152_1mm.nii.gz
+                7  Missing: 021_S_0337_2013-05-07_S18878_I389140_brain_mni152_1mm.nii.gz
+                8  Missing: 021_S_0337_2013-05-07_S18879_I389138_brain_mni152_1mm.nii.gz
+                9  Missing: 021_S_0337_2014-04-24_S21696_I432139_brain_mni152_1mm.nii.gz
+                10 Missing: 021_S_0337_2014-04-24_S21696_I432140_brain_mni152_1mm.nii.gz
+                11 Missing: 021_S_0337_2015-05-07_S25882_I510022_brain_mni152_1mm.nii.gz
+                12 Missing: 021_S_0337_2015-05-07_S25882_I510051_brain_mni152_1mm.nii.gz
+                13 Missing: 021_S_0753_2006-08-04_S17579_I33673_brain_mni152_1mm.nii.gz  #### 찾았음 복사해서 1_linear_1-6000으로 옮김
           
+                ---- NONLINEAR ----
+                Checking subj_list_ADNI1234_28001_11-6000_fnirt.log against directory ../1_nonlinear_1-6000
+                ------------------------------------------------
+                  1 Missing: 016_S_0702_2013-05-09_S18903_I377040_warped_brain.nii.gz
+                  2 Missing: 021_S_0337_2012-04-24_S14825_I327057_warped_brain.nii.gz
+                  3 Missing: 021_S_0337_2012-04-24_S14825_I327059_warped_brain.nii.gz
+                  4 Missing: 021_S_0337_2012-04-24_S14825_I327062_warped_brain.nii.gz
+                  5 Missing: 021_S_0337_2012-04-24_S14825_I327074_warped_brain.nii.gz
+                  6 Missing: 021_S_0337_2013-05-07_S18878_I389140_warped_brain.nii.gz
+                  7 Missing: 021_S_0337_2013-05-07_S18879_I389138_warped_brain.nii.gz
+                  8 Missing: 021_S_0337_2014-04-24_S21696_I432139_warped_brain.nii.gz
+                  8 Missing: 021_S_0337_2014-04-24_S21696_I432140_warped_brain.nii.gz
+                  10 Missing: 021_S_0337_2015-05-07_S25882_I510022_warped_brain.nii.gz
+                  11 Missing: 021_S_0337_2015-05-07_S25882_I510051_warped_brain.nii.gz
+                  
+
+                 아래는 13개 맞음 
+                  ---- LINEAR ----
+                  Checking subj_list_ADNI1234_28001_6001-12000.log against directory ../2_linear_6001-18000
+                  ------------------------------------------------
+                  1  Missing: 021_S_0984_2014-12-09_S24277_I467254_brain_mni152_1mm.nii.gz
+                  2  Missing: 023_S_0625_2007-07-16_S35036_I73330_brain_mni152_1mm.nii.gz
+                  3  Missing: 023_S_0625_2008-01-11_S44497_I90886_brain_mni152_1mm.nii.gz
+                  4  Missing: 023_S_0625_2008-01-11_S44498_I90882_brain_mni152_1mm.nii.gz
+                  5  Missing: 023_S_0625_2008-09-29_S56786_I124075_brain_mni152_1mm.nii.gz
+                  6  Missing: 023_S_0625_2008-09-29_S56787_I124080_brain_mni152_1mm.nii.gz
+                  7  Missing: 027_S_0644_2012-07-02_S15633_I334521_brain_mni152_1mm.nii.gz
+                  8  Missing: 027_S_4964_2012-10-06_S17005_I358248_brain_mni152_1mm.nii.gz
+                  9  Missing: 031_S_0294_2007-09-25_S40106_I79604_brain_mni152_1mm.nii.gz
+                  10 Missing: 031_S_0618_2006-06-06_S15271_I67110_brain_mni152_1mm.nii.gz
+                  11 Missing: 031_S_0618_2007-07-02_S36607_I72188_brain_mni152_1mm.nii.gz
+                  12 Missing: 033_S_0513_2007-05-31_S33069_I67706_brain_mni152_1mm.nii.gz
+
+                  Checking subj_list_ADNI1234_28001_12001-18000.log against directory ../2_linear_6001-18000
+                  ------------------------------------------------
+                  1  Missing: 033_S_1016_2016-11-01_S51667_I1051043_brain_mni152_1mm.nii.gz
+
+
+
+                   ---- NONLINEAR ----
+                  Checking subj_list_ADNI1234_28001_6001-12000.log against directory ../2_nonlinear_6001-18000
+                  ------------------------------------------------
+                  1  Missing: 021_S_0984_2014-12-09_S24277_I467254_warped_brain.nii.gz
+                  2  Missing: 023_S_0625_2007-07-16_S35036_I73330_warped_brain.nii.gz
+                  3  Missing: 023_S_0625_2008-01-11_S44497_I90886_warped_brain.nii.gz
+                  4  Missing: 023_S_0625_2008-01-11_S44498_I90882_warped_brain.nii.gz
+                  5  Missing: 023_S_0625_2008-09-29_S56786_I124075_warped_brain.nii.gz
+                  6  Missing: 023_S_0625_2008-09-29_S56787_I124080_warped_brain.nii.gz
+                  7  Missing: 027_S_0644_2012-07-02_S15633_I334521_warped_brain.nii.gz
+                  8  Missing: 027_S_4964_2012-10-06_S17005_I358248_warped_brain.nii.gz
+                  9  Missing: 031_S_0294_2007-09-25_S40106_I79604_warped_brain.nii.gz
+                  10 Missing: 031_S_0618_2006-06-06_S15271_I67110_warped_brain.nii.gz
+                  11 Missing: 031_S_0618_2007-07-02_S36607_I72188_warped_brain.nii.gz
+                  12 Missing: 033_S_0513_2007-05-31_S33069_I67706_warped_brain.nii.gz
+
+                  Checking subj_list_ADNI1234_28001_12001-18000.log against directory ../2_nonlinear_6001-18000
+                  ------------------------------------------------
+                  1 Missing: 033_S_1016_2016-11-01_S51667_I1051043_warped_brain.nii.gz
+
+                엑셀이 파일명 다 print 해서 ('ls ../2_nonlinear_6001-18000 > test1-12) 엑셀에서 subject log 6001-18000까지 맞춰보니 다음의 2개가 없음
+                033_S_0923_2011-10-21_S12625_I275472.nii: _brain_mni152_1mm.nii.gz 는 복사해서 2_linear_6001-18000으로 옮김; _warped_brain.nii.gz 는 복사해서 2_nonlinear_6001-18000으로 옮김;
+                082_S_1119_2008-09-02_S56159_I123249.nii: _brain_mni152_1mm.nii.gz 는 복사해서 2_linear_6001-18000으로 옮김; _warped_brain.nii.gz 는 복사해서 2_nonlinear_6001-18000으로 옮김;
+                
+               
+
+  
+
+
+
+
  
 
 

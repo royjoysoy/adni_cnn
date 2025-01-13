@@ -1,5 +1,6 @@
 # 1-13-2025 Roy Seo
-# 에러난 것 behavioral (demographic) file에서 지우기 
+# 에러난 것 behavioral (demographic) csv file row에서 지우기
+#  
 # 1_linear_1-6000;
 # 2_linear_6001-1800;
 # 1_linear_1-6000;

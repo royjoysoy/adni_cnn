@@ -4,8 +4,8 @@ Purpose: Add diagnostic (DX) information to ADNI MRI dataset by matching image a
 
 This script merges diagnostic information from ADNIMERGE into a dataset containing ADNI MRI information.
 It matches records based on:
-- Image Data ID (from input file) with IMAGEUID (from ADNIMERGE)
-- Subject (from input file) with PTID (from ADNIMERGE)
+- 'Image Data ID' (from '4-adni_1234_28002_dx_age_sex_acqdate.csv') with 'IMAGEUID' (from 'ADNIMERGE_08Jan2025.csv')
+- 'Subject' (from '4-adni_1234_28002_dx_age_sex_acqdate.csv') with PTID (from 'ADNIMERGE_08Jan2025.csv')
 
 Input Files:
 - 4-adni_1234_28002_dx_age_sex_acqdate.csv: Contains MRI data with Image Data ID and Subject

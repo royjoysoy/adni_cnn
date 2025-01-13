@@ -1,3 +1,11 @@
+
+#'ADNI1234_subj_n1189.txt'의 파일에있는 subjects 1189 (즉 ADNI1234에서 가져온 28002개의 이미지가 총 1189 subjects것이다)
+# 1189명의 subjects를 여기서  'All_Subjects_DXSUM_07Jan2025.csv' 골라낸다.
+# 몇개가 골라졌는지 출력
+# 필터링 테이터에서 누락된 피험자 ID가 있는지 출력
+# 진단코드가 변한 사람이 있는지 출력
+
+
 import pandas as pd
 
 def process_subjects_data(subject_list_file, csv_file, output_file='7-filtered_subjects_DXSUM_01_08-2025.csv'):

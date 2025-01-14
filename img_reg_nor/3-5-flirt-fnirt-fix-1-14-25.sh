@@ -15,6 +15,7 @@
 export FSLDIR=/usr/local/fsl/6.0
 source ${FSLDIR}/etc/fslconf/fsl.sh
 export PATH=${FSLDIR}/bin:${PATH}
+fnirtconfig="${FSLDIR}/etc/flirtsch/T1_2_MNI152_2mm.cnf"
 
 # Input parameters
 input_brain="${norm_dir}/temp_brain_reoriented.nii.gz"

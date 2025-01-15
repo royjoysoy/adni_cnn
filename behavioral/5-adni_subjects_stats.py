@@ -76,8 +76,8 @@ def analyze_adni_data(file_path):
 #def analyze_adni_data(file_path='4-adni_1234_28002_dx_age_sex_acqdate.csv'):
     # Read the CSV file
     df = pd.read_csv(file_path)
-    
-    print("Initial data check:")
+    print(f"\nTotal number of rows (excluding header): {len(df)}")
+    print("\nInitial data check:")
     print("Columns in the dataset:", df.columns.tolist())
     print("\nSample rows:")
     print(df[['Subject', 'Group', 'Sex', 'Acq Date']].head())

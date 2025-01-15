@@ -2,7 +2,7 @@
 match_adni_subjects.py
 
 This script combines and reorganizes ADNI subject data by:
-1. Taking a CSV file downloaded from ADNI ('ADNI_1_2_3_4_11_14_24_1_02_2025.csv')
+1. Taking a CSV file downloaded from ADNI ('raw_28002_ADNI_1_2_3_4_11_14_24_1_08_2025.csv')
 2. Adding the full image filenames as the first column by matching Image Data IDs 
    from 'subj_list_28001_raw_prac.log'
 3. Adding '_warped_brain' before '.nii' and changing extension to '.nii.gz'
@@ -38,7 +38,7 @@ def create_matched_dataset():
             image_id_to_filename[image_id] = filename
     
     # Read the CSV file
-    df = pd.read_csv('/Users/test_terminal/Desktop/adni_cnn/behavioral/ADNI_1_2_3_4_11_14_24_1_02_2025.csv')
+    df = pd.read_csv('/Users/test_terminal/Desktop/adni_cnn/behavioral/raw_28002_ADNI_1_2_3_4_11_14_24_1_08_2025.csv')
     
     # Create a new column for the full filename and modify it
     df['Full_Filename'] = df['Image Data ID'].map(lambda x: image_id_to_filename.get(x, ''))
@@ -63,6 +63,6 @@ def create_matched_dataset():
     print(f"Total rows in output CSV: {len(df)}")
     print(f"Number of matched files: {len(df[df['Full_Filename'] != ''])}")
     print(f"Number of unmatched files: {len(df[df['Full_Filename'] == ''])}")
-
+    print(f"Number of unmatched files: {(df[df['Full_Filename'] == ''])}")
 if __name__ == "__main__":
     create_matched_dataset()

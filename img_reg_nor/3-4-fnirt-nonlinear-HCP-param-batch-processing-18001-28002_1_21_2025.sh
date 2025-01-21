@@ -8,17 +8,19 @@
 # 01-06-2025 : the subjects 6001-12000 
 # 01-07-2025 : the subjects 12001-18000
 # 01-19-2025 : the subjects 18001-28001
+# 01-20-2025 : the subjects 18001-28002 : 중간에 qsub 을 또 눌러버려서, 다시 돌리는 김에 누락되었던 이미지 "I1882576"도 함께 돌림. 
+# 01-21-2025 : qsub 돌리다가 멈춰서 다시 돌림
 
 # Usage: example
-# bash ./4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs-18001-28001.sh
+# bash ./4-1-fnirt-nonlinear-HCP-param-batch-processing-submit-fnirt-jobs-18001-28002_1_21_2025.sh
 
 #$ -S /bin/bash
 #$ -N fnirt_job
 #$ -V
-#$ -t 1-10000
+#$ -t 1-10002
 #$ -cwd
-#$ -o fnirt_stdout_18001-28001/$JOB_NAME.$TASK_ID.stdout
-#$ -e fnirt_stderr_18001-28001/$JOB_NAME.$TASK_ID.stderr
+#$ -o fnirt_stdout_18001-28002/$JOB_NAME.$TASK_ID.stdout
+#$ -e fnirt_stderr_18001-28002/$JOB_NAME.$TASK_ID.stderr
 
 
 # Setup FSL
@@ -28,18 +30,18 @@ export PATH=${FSLDIR}/bin:${PATH}
 
 # Directory setup
 BASE_DIR="/ibic/scratch/royseo_workingdir"
-INPUT_BASE="${BASE_DIR}/normalized2mni152_1mm_18001-28001"
+INPUT_BASE="${BASE_DIR}/normalized2mni152_1mm_18001-28002"
 SCRIPT_DIR="${BASE_DIR}/scripts"
 
 # Debug line for subject list file
-echo "Reading subject from: ${SCRIPT_DIR}/subj_list_ADNI1234_28001_18001-28001.log"
+echo "Reading subject from: ${SCRIPT_DIR}/subj_list_ADNI1234_28002_18001-28002_1_20_2025.log"
 
 # Get subject identifier from the list file
-subject=$(sed -n -e "${SGE_TASK_ID}p" "${SCRIPT_DIR}/subj_list_ADNI1234_28001_18001-28001.log")
+subject=$(sed -n -e "${SGE_TASK_ID}p" "${SCRIPT_DIR}/subj_list_ADNI1234_28002_18001-28002_1_20_2025.log")
 
 # Create symbolic links with both task ID and subject ID
-ln -sf $JOB_NAME.$TASK_ID.stdout fnirt_stdout_18001-28001/$JOB_NAME.task${TASK_ID}_${subject}.stdout
-ln -sf $JOB_NAME.$TASK_ID.stderr fnirt_stderr_18001-28001/$JOB_NAME.task${TASK_ID}_${subject}.stderr
+ln -sf $JOB_NAME.$TASK_ID.stdout fnirt_stdout_18001-28002/$JOB_NAME.task${TASK_ID}_${subject}.stdout
+ln -sf $JOB_NAME.$TASK_ID.stderr fnirt_stderr_18001-28002/$JOB_NAME.task${TASK_ID}_${subject}.stderr
 
 # Define the input/output directory structure
 subject_base=$(echo "${subject}" | sed 's/\.nii$//')

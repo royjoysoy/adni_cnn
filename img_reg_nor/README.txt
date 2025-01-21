@@ -367,6 +367,30 @@ First:  왜 linear 에서는 13개 없고 non linear에서는 11개가 없나 ##
                 엑셀이 파일명 다 print 해서 ('ls ../2_nonlinear_6001-18000 > test1-12) 엑셀에서 subject log 6001-18000까지 맞춰보니 다음의 2개가 없음
                 033_S_0923_2011-10-21_S12625_I275472.nii: _brain_mni152_1mm.nii.gz 는 복사해서 2_linear_6001-18000으로 옮김; _warped_brain.nii.gz 는 복사해서 2_nonlinear_6001-18000으로 옮김;
                 082_S_1119_2008-09-02_S56159_I123249.nii: _brain_mni152_1mm.nii.gz 는 복사해서 2_linear_6001-18000으로 옮김; _warped_brain.nii.gz 는 복사해서 2_nonlinear_6001-18000으로 옮김;
+
+                
+    16. 1-20-2025
+                # 18개 error 
+                1 082_S_4224_2013-10-23_S72333_I1051042 not complete
+                2 094_S_1241_2007-02-22_S27009_I65418 not complete
+                3 094_S_1241_2007-02-22_S27009_I65419 not complete
+                4 094_S_1241_2007-02-22_S27009_I65421 not complete
+                5 127_S_1032_2012-12-04_S17650_I666335 not complete
+                6 127_S_1032_2014-12-10_S24281_I467257 not complete
+                7 127_S_1032_2014-12-10_S24281_I467258 not complete
+                8 127_S_4198_2016-09-20_S50044_I797080 not complete
+                9 133_S_1170_2006-12-29_S24673_I89974 not complete
+                10 133_S_1170_2006-12-29_S24673_I89975 not complete
+                11 133_S_1170_2006-12-29_S24673_I89976 not complete ###2
+                12 137_S_0686_2006-07-03_S16048_I46668 not complete
+                13 137_S_0686_2007-02-12_S26334_I66436 not complete
+                14 137_S_0796_2009-02-12_S63090_I137267 not complete
+                15 137_S_0973_2006-11-15_S22528_I43060 not complete
+                16 137_S_0973_2008-06-03_S50915_I109973 not complete
+                17 137_S_1041_2006-11-09_S22310_I43071 not complete
+                18 137_S_1041_2008-12-18_S61000_I134940 not complete
+                
+
                 
                
 

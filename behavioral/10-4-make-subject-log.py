@@ -1,5 +1,5 @@
-#마지막 라인 매뉴얼리 없애라
-#fsl_anat_subj_list_2409_raw.log로 저장
+# 마지막 라인 매뉴얼리 없애라
+# fsl_anat_subj_list_2409_raw.log 이름바꿔서 저장하였음 /img_reg_nor/fsl_anat_subj_list_2409_raw.log
 
 import pandas as pd
 

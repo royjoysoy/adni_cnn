@@ -1,7 +1,11 @@
 '''
-/ibic/scratch/royseo_workingdir/raw_w_acq_date에서 빠르게 복사해오는 python script를 만들어줘
-fsl_anat_subj_list_2409_raw.log
-복사해올 장소 /ibic/scratch/royseo_workingdir/fsl_anat
+01-23-25 Roy Seo Korea
+source folder: /ibic/scratch/royseo_workingdir/raw_w_acq_date 
+source: fsl_anat_subj_list_2409_raw.log; 
+          -  복사해올 파일 리스트를 가지고 있음 
+          -  (예: 002_S_0295_2006-04-18_S13408_I45107.nii)
+
+Desitnation directory: /ibic/scratch/royseo_workingdir/fsl_anat/raw
 '''
 
 import os

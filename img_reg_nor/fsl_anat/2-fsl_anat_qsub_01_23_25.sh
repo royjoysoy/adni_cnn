@@ -1,3 +1,24 @@
+ 
+# FSL_ANAT Batch Processing Script
+# Script for running FSL's anatomical processing pipeline (fsl_anat) on multiple subjects using Sun Grid Engine.
+# Monitor: 
+        # 1. qstat -u royseo
+        # 2. cat fsl_anat_logs/fsl_anat_normalization.o*
+
+# Requirements
+        # 1. FSL 6.0 installed at /usr/local/fsl/6.0/
+        # 2. Sun Grid Engine (SGE) environment
+        # 3. Input files in NIFTI format (.nii)
+        # 4. Subject list file with one filename per line : fsl_anat_subj_list_2409_raw.log
+# Setup
+        # 1. Create directory structure:
+        #       2. scripts/fsl_anat_logs/
+        #       3. raw/ (input NIFTI files)
+        #       4. processed/ (output .anat folders) 
+        #           - 01-23-2025: 'processed' folder was empty after the job is completed
+        #           - 01-23-2025: had to use /fsl_anat/scripts/2-1-copy-lin-nonlin-01-23-2025.py
+
+
 #$ -S /bin/bash
 #$ -N fsl_anat_normalization
 #$ -V

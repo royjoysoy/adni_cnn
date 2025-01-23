@@ -1,3 +1,13 @@
+# 01-23-2025 Roy Seo Korea
+'''
+Load the CSV file into a DataFrame using pandas.
+Group the data by the Subject (3rd column) and Visit (7th column).
+Count the occurrences of each unique Description (8th column) within each Subject and Visit group.
+Identify the most and least frequently occurring Description in each group.
+csv file: 8-2-DX_filled2
+output: print in the terminal and '10-1-description-stat.txt' 
+'''
+
 import pandas as pd
 
 # Read CSV file 

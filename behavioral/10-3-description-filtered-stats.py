@@ -1,4 +1,7 @@
 '''
+0. PRECHEK: 10-2-description-filtered.py 에서 MPR; GradWarp; B1 Correction; N3 처리 된것을 필터링한 
+            output:'10-2-description-filtered.csv'에서 같은 'Subject' 같은 'Visit' time point, 같은 'Acq Date'가 있는지 확인. 
+            있어서 지웠음. 중복된 경우 첫번째것을 버리고 두번째것을 킵하고 싶었는데 아마 두번째 것이 버려진거 같음 (이부분: df_unique = df.drop_duplicates(subset=['Subject', 'Visit', 'Acq Date'], keep='first'))
 1. Subject 열에서 동일한 Visit이 여러 번 나타나는 Subject들을 확인하고, 해당 정보 출력.
 2. 고유한 Subject의 수를 계산하여 출력.
 3. DX_fill 그룹(예: 'CN', 'Dementia', 'MCI')별로 데이터 통계를 계산하고 출력.
@@ -24,7 +27,6 @@ print("0. Subjects with duplicate visits in same timepoint:")
 print(f"Number of cases: {len(duplicate_visits)}")
 print(duplicate_visits)
 print("\n")
-
 
 # Read and process data
 df = pd.read_csv('10-2-description-filtered.csv')

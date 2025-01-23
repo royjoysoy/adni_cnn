@@ -1,0 +1,40 @@
+Subject Statistics Report
+------------------------------
+
+1. Subjects with multiple visits:
+Total count: 595
+Subject
+002_S_0295    4
+002_S_0413    4
+002_S_0559    3
+002_S_0685    3
+002_S_0729    5
+             ..
+941_S_1197    4
+941_S_1202    4
+941_S_1203    3
+941_S_1295    3
+941_S_1311    5
+Name: Visit, Length: 595, dtype: int64
+
+2. Number of unique subjects: 647
+
+3. DX_fill group counts:
+DX_fill
+MCI         1089
+Dementia     761
+CN           719
+Name: count, dtype: int64
+
+4. Age statistics:
+Min: 55.0
+Max: 93.0
+Mean: 76.5
+Median: 77.0
+Std: 6.8
+
+5. Sex distribution:
+Sex
+M    1400
+F    1169
+Name: count, dtype: int64

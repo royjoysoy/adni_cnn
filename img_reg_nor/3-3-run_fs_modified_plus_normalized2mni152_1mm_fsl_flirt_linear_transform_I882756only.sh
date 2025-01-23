@@ -67,7 +67,7 @@ if [ ! -d "${SUBJECTS_DIR}" ]; then
     mkdir -p "${SUBJECTS_DIR}"
 fi
 
-#Stage 2: FreeSurfer Preprocessing
+# Stage 2: FreeSurfer Preprocessing
 echo "=== Stage 2: FreeSurfer Preprocessing ==="
 echo "Running FreeSurfer recon-all..."
 recon-all -s $subj_name -i ${t1_file} -autorecon1 -gcareg -canorm -careg -rmneck -skull-lta -calabel -normalization2

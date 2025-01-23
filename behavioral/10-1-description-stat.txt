@@ -1,0 +1,30 @@
+Description Frequency Statistics
+------------------------------
+
+Number of unique subjects: 1122
+
+Description counts:
+MPR; GradWarp: 3058 times
+MPR-R; GradWarp: 2991 times
+MPR; GradWarp; B1 Correction; N3: 2569 times
+MPR; GradWarp; B1 Correction: 2566 times
+MPR-R; GradWarp; B1 Correction; N3: 2492 times
+MPR-R; GradWarp; B1 Correction: 2488 times
+MT1; GradWarp; N3m: 2476 times
+MPR; GradWarp; B1 Correction; N3; Scaled: 1992 times
+MT1; N3m: 971 times
+MPR-R; GradWarp; B1 Correction; N3; Scaled: 513 times
+MPR-R; GradWarp; N3: 509 times
+MPR; GradWarp; N3: 500 times
+MPR; GradWarp; N3; Scaled: 380 times
+MPR; GradWarp; B1 Correction; N3; Scaled_2: 222 times
+MPR-R; GradWarp; N3; Scaled: 111 times
+MPR; ; N3: 79 times
+MPR-R; GradWarp; B1 Correction; N3; Scaled_2: 74 times
+MPR-R; ; N3: 60 times
+MPR; ; N3; Scaled: 58 times
+MPR; GradWarp; N3; Scaled_2: 32 times
+MPR; ; N3; Scaled_2: 29 times
+MPR-R; ; N3; Scaled: 12 times
+MPR-R; GradWarp; N3; Scaled_2: 9 times
+MPR-R; ; N3; Scaled_2: 8 times

@@ -8,7 +8,7 @@
    * Nonlinear 파일용: /ibic/scratch/royseo_workingdir/fsl_anat/processed/nonlinear
 3. 복사할 파일:
    * T1_to_MNI_lin.nii.gz → linear 폴더로
-   * T1_to_MNInonlin.nii.gz → nonlinear 폴더로
+   * T1_to_MNInonlin.nii.gz → nonlinear 폴더로: 최종 결과물 나는 linear matrix -> nonlinear로 된것을 쓰려고 한다.   
 4. 파일 이름 변경 규칙:
    * 원본 폴더명에서 '.anat'을 제거하고 밑줄()을 추가한 후 원본 파일명을 붙입니다
    * 예시:

@@ -15,10 +15,13 @@
 # Setup
         # 1. Create directory structure:
         #       2. scripts/fsl_anat_logs/
-        #       3. raw/ (input NIFTI files)
+        #       3. /raw_w_acq_date (input NIFTI files)
         #       4. processed/ (output .anat folders) 
         #           - 01-23-2025: 'processed' folder was empty after the job is completed
         #           - 01-23-2025: had to use /fsl_anat/scripts/2-1-copy-lin-nonlin-01-23-2025.py
+        # 5. qsub돌리기 전에 로그 디렉토리 생성: mkdir -p ./fsl_anat_logs_1-28002 
+
+        # 돌리는 방법: 다른 파일을 돌릴 필요는 없고 이렇게 터미널에만 치면 끝 "qsub 2-fsl_anat_qsub_1-28002-01_24_25.sh"
 
 
 #$ -S /bin/bash
@@ -35,7 +38,7 @@ export PATH=${FSLDIR}/bin:${PATH}
 
 # Set file paths
 FILE_LIST="/ibic/scratch/royseo_workingdir/fsl_anat/scripts/subj_list_28002_raw.log"
-INPUT_DIR="/ibic/scratch/royseo_workingdir/fsl_anat/raw_28002"
+INPUT_DIR="/ibic/scratch/royseo_workingdir/fsl_anat/raw_w_acq_date"
 OUTPUT_DIR="/ibic/scratch/royseo_workingdir/fsl_anat/processed_28002"
 
 # Check if file list exists

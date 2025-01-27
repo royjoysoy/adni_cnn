@@ -38,7 +38,7 @@ export PATH=${FSLDIR}/bin:${PATH}
 
 # Set file paths
 FILE_LIST="/ibic/scratch/royseo_workingdir/fsl_anat/scripts/subj_list_28002_raw.log"
-INPUT_DIR="/ibic/scratch/royseo_workingdir/fsl_anat/raw_w_acq_date"
+INPUT_DIR="/ibic/scratch/royseo_workingdir/raw_w_acq_date"
 OUTPUT_DIR="/ibic/scratch/royseo_workingdir/fsl_anat/processed_28002"
 
 # Check if file list exists
@@ -49,6 +49,11 @@ fi
 
 # Create output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
+# Check if output directory is writable
+if [ ! -w "$OUTPUT_DIR" ]; then
+    echo "$(date): Error - Output directory $OUTPUT_DIR is not writable" >&2
+    exit 1
+fi
 
 # Extract the filename for the current task ID
 FILE_NAME=$(sed -n "${SGE_TASK_ID}p" $FILE_LIST)
@@ -62,8 +67,18 @@ fi
 # Run fsl_anat for the specific file
 if [ -f "${INPUT_DIR}/${FILE_NAME}" ] && [ -r "${INPUT_DIR}/${FILE_NAME}" ]; then
     echo "$(date): Processing ${FILE_NAME}"
-    fsl_anat -i "${INPUT_DIR}/${FILE_NAME}" --nobias
-    mv "${FILE_NAME%.*}.anat" "${OUTPUT_DIR}/"
+    
+    # Change to output directory before running fsl_anat
+    cd "${OUTPUT_DIR}"
+    
+    # Run fsl_anat
+    fsl_anat -i "${INPUT_DIR}/${FILE_NAME}" --nobias -o "${OUTPUT_DIR}/${FILE_NAME%.*}"
+    
+    # Check if processing was successful
+    if [ $? -ne 0 ]; then
+        echo "$(date): Error - fsl_anat processing failed for ${FILE_NAME}" >&2
+        exit 1
+    fi
 else
     echo "$(date): Error - File ${INPUT_DIR}/${FILE_NAME} not found or not readable" >&2
     exit 1

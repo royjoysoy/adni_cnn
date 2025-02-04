@@ -1,9 +1,9 @@
 """
-USAGE: python3 5-adni_subjects_stats.py 4-adni_1234_28002_dx_age_sex_acqdate.csv
+USAGE: python3 5-adni_subjects_stats.py 9-delete-the-errorfiles.csv
        python3 5-adni_subjects_stats.py 1_1_input_df_modified_prac.csv
 
 This script analyzes longitudinal visit data from the ADNI (Alzheimer's Disease Neuroimaging Initiative) dataset.
-It processes the file '4-adni_1234_28002_dx_age_sex_acqdate.csv' containing visit records.
+It processes the file '9-delete-the-errorfiles.csv' containing visit records.
 
 Performs the following analyses:
 
@@ -31,7 +31,7 @@ Performs the following analyses:
 
 Input:
 - command-line arguments CSV file: eaxmple: '4-adni_1234_28002_dx_age_sex_acqdate.csv' 
-- Required columns: Subject, Sex, Group, Acq Date
+- Required columns: Subject, Sex, Group-RS:Initial, Acq Date
 
 Output:
 - Printed statistics
@@ -70,8 +70,28 @@ COLORS = {
         'coral': '#FF8672'        # PANTONE 170C
     }
 }
+def apply_hanyang_style(ax):
+    """Apply Hanyang styling to plot elements"""
+    ax.title.set_color(COLORS['primary']['blue'])
+    ax.xaxis.label.set_color(COLORS['primary']['blue'])
+    ax.yaxis.label.set_color(COLORS['primary']['blue'])
+    ax.tick_params(colors=COLORS['primary']['blue'])
+    for spine in ax.spines.values():
+        spine.set_edgecolor(COLORS['primary']['blue'])
+
+def set_plot_style():
+    """Set the default plotting style"""
+    plt.style.use('seaborn-v0_8-darkgrid')  # Using specific seaborn style
+    sns.set_palette([COLORS['primary']['blue'], COLORS['primary']['silver']])
 
 def get_year(date_str):
+    """Convert date string to year, handling both string and float inputs"""
+    if pd.isna(date_str):
+        return None  # Quietly return None for NaN values
+        
+    # Convert to string if it's not already
+    date_str = str(date_str)
+    
     try:
         # First try mm/dd/yy format
         return datetime.strptime(date_str, '%m/%d/%y').year
@@ -84,23 +104,89 @@ def get_year(date_str):
                 # Then try yyyy-mm-dd format
                 return datetime.strptime(date_str, '%Y-%m-%d').year
             except ValueError:
-                print(f"Problematic date: {date_str}")
+                # Only print problematic dates that aren't NaN
+                if date_str.lower() != 'nan':
+                    print(f"Problematic date: {date_str}")
                 return None
 
-def set_style():
-    """Set the style for all plots"""
-    plt.style.use('seaborn')
-    sns.set_palette([COLORS['primary']['blue'], COLORS['primary']['silver']])
+# When using in analyze_adni_data:
+    # First, check how many NaN values exist
+    print(f"\nNumber of missing dates: {df['Acq Date'].isna().sum()}")
+    
+    # Then convert to years
+    df['Year'] = df['Acq Date'].astype(str).apply(get_year)
+
+def make_autopct(values):
+    """Create percentage labels with counts for pie charts"""
+    def my_autopct(pct):
+        total = sum(values)
+        val = int(round(pct*total/100.0))
+        return f'n={val}\n({pct:.1f}%)'
+    return my_autopct
+
+def plot_visit_distribution(visits_per_subject):
+    """Create an improved visualization of visit distribution"""
+    set_plot_style()  # Set style at the start
+    fig, ax = plt.subplots(figsize=(12, 7))
+    plt.grid(True, alpha=0.3, linestyle='--', zorder=0)
+    
+    max_visits = visits_per_subject.max()
+    bins = np.arange(0, max_visits + 2, 1)
+    
+    counts, bins, patches = plt.hist(visits_per_subject, 
+                                   bins=bins,
+                                   color=COLORS['primary']['blue'],
+                                   edgecolor='black',
+                                   linewidth=1,
+                                   alpha=0.8,
+                                   zorder=2)
+    
+    for i, count in enumerate(counts):
+        if count > 0:
+            plt.text(bins[i] + 0.5, count + 1,
+                    f'{int(count)}',
+                    ha='center',
+                    va='bottom',
+                    fontsize=10,
+                    fontweight='bold',
+                    zorder=3)
+    
+    plt.title('Distribution of Visits per Subject', fontsize=14, pad=20)
+    plt.xlabel('Number of Visits', fontsize=12)
+    plt.ylabel('Number of Subjects', fontsize=12)
+    
+    plt.xticks(bins[:-1] + 0.5, bins[:-1].astype(int))
+    
+    max_count = max(counts)
+    plt.ylim(0, max_count * 1.15)
+    
+    stats_text = (f'Total Subjects: {len(visits_per_subject)}\n'
+                 f'Average Visits: {visits_per_subject.mean():.2f}\n'
+                 f'Maximum Visits: {int(max_visits)}')
+    
+    plt.text(0.95, 0.95, stats_text,
+             transform=plt.gca().transAxes,
+             verticalalignment='top',
+             horizontalalignment='right',
+             bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    
+    apply_hanyang_style(ax)
+    plt.tight_layout()
+    plt.savefig('5-1-visits_distribution.png', dpi=300, bbox_inches='tight')
+    plt.close()
 
 def analyze_adni_data(file_path):
+    """Main function to analyze ADNI data"""
+    set_plot_style()  # Set style at the start
+    
     # Read the CSV file
     df = pd.read_csv(file_path)
     print(f"\nTotal number of rows (excluding header): {len(df)}")
     print("\nInitial data check:")
     print("Columns in the dataset:", df.columns.tolist())
     print("\nSample rows:")
-    print(df[['Subject', 'Group', 'Sex', 'Acq Date']].head())
-    print("\nUnique values in Group column:", df['Group'].unique())
+    print(df[['Subject', 'RS:DX_fill', 'Sex', 'Acq Date']].head())
+    print("\nUnique values in DX_fill column:", df['RS:DX_fill'].unique())
     
     # 1. Count unique subjects
     n_subjects = df['Subject'].nunique()
@@ -114,105 +200,42 @@ def analyze_adni_data(file_path):
     print(f"Average visits per subject: {avg_visits:.2f}")
     print(f"Maximum visits for a subject: {max_visits}")
     
-    # Original visits distribution plot
-    plt.figure(figsize=(10, 6))
-    counts, bins, _ = plt.hist(visits_per_subject, bins=20, edgecolor='black', linewidth=1)
-    plt.title('Distribution of Number of Visits per Subject')
-    plt.xlabel('Number of Visits')
-    plt.ylabel('Number of Subjects')
-    
-    # Add frequency numbers on top of each bar
-    for i in range(len(counts)):
-        if counts[i] != 0:  # Only add label if bar height is not zero
-            center = (bins[i] + bins[i+1])/2  # Calculate center of the bar
-            plt.text(center, counts[i], f'{int(counts[i])}', 
-                    ha='center', va='bottom')
-    
-    plt.savefig('5-1-visits_distribution_original.png')
-    plt.show()
-    plt.close()
-    
-    # New visits distribution with Hanyang theme
-    plt.figure(figsize=(10, 6))
-    plt.grid(True, alpha=0.3, zorder=0)  # Add grid first with zorder=0
-    
-    # Define specific bins to match your desired visualization
-    bins = np.arange(0, 14, 2)  # Creates bins [0, 2, 4, 6, 8, 10, 12]
-    
-    counts, bins, patches = plt.hist(visits_per_subject, bins=bins, 
-                              color=COLORS['primary']['blue'], 
-                              edgecolor='black', linewidth=1, alpha=0.8,
-                              zorder=2)  # Add histogram with higher zorder
-    plt.title('Distribution of Number of Visits per Subject (Hanyang Theme)')
-    plt.xlabel('Number of Visits')
-    plt.ylabel('Number of Subjects')
-    
-    # Add frequency numbers on top of each bar - corrected center calculation
-    bin_centers = [(bins[i] + bins[i+1])/2 for i in range(len(bins)-1)]
-    for count, center in zip(counts, bin_centers):
-        if count != 0:  # Only add label if bar height is not zero
-            plt.text(center, count, f'{int(count)}', 
-                    ha='center', va='bottom',
-                    zorder=3)  # Text should be on top of everything
-    
-    # Set x-axis ticks to match your visualization
-    plt.xticks(bins)
-    
-    # Set y-axis limits
-    plt.ylim(0, 300)
-    
-    plt.savefig('5-1-visits_distribution_hanyang.png')
-    plt.close()
+    # Create visit distribution plots
+    plot_visit_distribution(visits_per_subject)
     
     # 3. Analyze sex distribution
     sex_dist = df.groupby('Sex')['Subject'].nunique()
     print(f"\n3. Sex Distribution:")
     print(sex_dist)
     
-    # Function to create percentage labels with counts
-    def make_autopct(values):
-        def my_autopct(pct):
-            total = sum(values)
-            val = int(round(pct*total/100.0))
-            return f'n={val}\n({pct:.1f}%)'
-        return my_autopct
-    
-    # Original sex distribution plot
-    plt.figure(figsize=(8, 8))
-    plt.pie(sex_dist, labels=sex_dist.index, 
-            autopct=make_autopct(sex_dist.values),
-            textprops={'weight': 'bold'})
-    plt.title('Sex Distribution of Subjects')
-    plt.savefig('5-2-sex_distribution_original.png')
-    plt.close()
-    
-    # New sex distribution with Hanyang theme
+    # Create sex distribution plots with Hanyang theme
     plt.figure(figsize=(8, 8))
     colors = [COLORS['primary']['blue'], COLORS['primary']['silver']]
-    text_colors = [COLORS['primary']['silver'], COLORS['primary']['blue']]  # Reversed colors for text
+    text_colors = [COLORS['primary']['silver'], COLORS['primary']['blue']]
     
-    # Updated pie chart with text colors and black edges
-    wedges, texts, autotexts = plt.pie(sex_dist, labels=sex_dist.index, colors=colors,
+    edges, texts, autotexts = plt.pie(sex_dist, labels=sex_dist.index, colors=colors,
                                       autopct=make_autopct(sex_dist.values),
-                                      textprops={'weight': 'bold'},
-                                      wedgeprops={'edgecolor': 'black', 'linewidth': 1},  # Add black borders
+                                      textprops={'weight': 'bold', 'fontsize': 15},
+                                      wedgeprops={'edgecolor': 'black', 'linewidth': 1},
                                       startangle=90)
     
-    # Set the colors for each text element
     for i, autotext in enumerate(autotexts):
         autotext.set_color(text_colors[i])
+        autotext.set_fontsize(15)
     for i, text in enumerate(texts):
         text.set_color(text_colors[i])
+        text.set_fontsize(15)
         
-    plt.title('Sex Distribution of Subjects (Hanyang Theme)')
-    plt.savefig('5-2-sex_distribution_hanyang.png')
+    plt.title('Sex Distribution of Subjects')
+    plt.savefig('5-2-sex_distribution.png')
     plt.close()
     
     # 4. Analyze study duration
     print("\nSample dates before processing:")
     print(df['Acq Date'].head())
     
-    df['Year'] = df['Acq Date'].apply(get_year)
+    # Convert dates to years (moved here from global scope)
+    df['Year'] = df['Acq Date'].astype(str).apply(get_year)
     df = df.dropna(subset=['Year'])
     
     duration_per_subject = df.groupby('Subject').agg({
@@ -224,82 +247,81 @@ def analyze_adni_data(file_path):
     print(f"Average study duration: {avg_duration:.2f} years")
     print(f"Maximum study duration: {duration_per_subject['Year'].max()} years")
     
-    # Original duration distribution
-    plt.figure(figsize=(10, 6))
-    counts, bins, _ = plt.hist(duration_per_subject['Year'], bins=20, 
-                              edgecolor='black', linewidth=1)
-    plt.title('Distribution of Study Duration per Subject')
-    plt.xlabel('Duration (years)')
-    plt.ylabel('Number of Subjects')
-    
-    # Add frequency numbers on top of each bar
-    for i in range(len(counts)):
-        if counts[i] != 0:  # Only add label if bar height is not zero
-            center = (bins[i] + bins[i+1])/2  # Calculate center of the bar
-            plt.text(center, counts[i], f'{int(counts[i])}', 
-                    ha='center', va='bottom')
-    
-    plt.savefig('5-3-duration_distribution_original.png')
-    plt.close()
-    
-    # New duration distribution with Hanyang theme
-    plt.figure(figsize=(10, 6))
+    # Create duration distribution plot with Hanyang theme
+    fig, ax = plt.subplots(figsize=(10, 6))
+    plt.grid(True, alpha=0.3, color=COLORS['primary']['silver'])
     counts, bins, _ = plt.hist(duration_per_subject['Year'], bins=15, 
                               color=COLORS['secondary']['yellow_green'],
-                              edgecolor='black', linewidth=1, alpha=0.8)
-    plt.title('Distribution of Study Duration per Subject')
-    plt.xlabel('Duration (years)')
-    plt.ylabel('Number of Subjects')
-    plt.grid(True, alpha=0.3)
+                              edgecolor='black', 
+                              linewidth=1, 
+                              alpha=0.8)
     
-    # Add frequency numbers on top of each bar
+    plt.title('Distribution of Study Duration per Subject', color=COLORS['primary']['blue'])
+    plt.xlabel('Duration (years)', color=COLORS['primary']['blue'], fontsize=15)
+    plt.ylabel('Number of Subjects', color=COLORS['primary']['blue'], fontsize=15)
+    plt.tick_params(colors=COLORS['primary']['blue'], labelsize=12)
+    
+    
     for i in range(len(counts)):
-        if counts[i] != 0:  # Only add label if bar height is not zero
-            center = (bins[i] + bins[i+1])/2  # Calculate center of the bar
+        if counts[i] != 0:
+            center = (bins[i] + bins[i+1])/2
             plt.text(center, counts[i], f'{int(counts[i])}', 
-                    ha='center', va='bottom')
+                    ha='center', va='bottom', fontsize=12)
     
-    plt.savefig('5-3-duration_distribution_hanyang.png')
+    plt.savefig('5-3-duration_distribution.png')
     plt.close()
-    
+
     # 5. Analyze diagnosis changes
-    diagnosis_changes = df.groupby(['Subject'])['Group'].agg(list)
+    # First, ensure RS:DX_fill column exists and handle potential missing values
+    if 'RS:DX_fill' not in df.columns:
+        print("Warning: 'RS:DX_fill' column not found in dataset")
+        return
     
-    print("\n5. Diagnosis Changes Analysis:")
-    print("\nFirst 10 subjects' diagnosis sequences:")
-    print(diagnosis_changes.head(10))
+    # Get first diagnosis for each subject
+    group_dist = df.groupby('Subject')['RS:DX_fill'].first().value_counts()
     
-    # Add new Group distribution analysis with Hanyang theme
-    group_dist = df.groupby('Subject')['Group'].first().value_counts()
-    print("\n6. Group Distribution (First visit diagnosis):")
+    # Check if we have any valid diagnoses
+    if len(group_dist) == 0:
+        print("Warning: No valid diagnosis data found")
+        return
+    
+    print("\n5. Group Distribution (First visit diagnosis):")
     print(group_dist)
     
-    plt.figure(figsize=(8, 8))
-    colors = [COLORS['occasional']['mint'], 
-             COLORS['occasional']['coral'],
-             COLORS['secondary']['gold']]
-    wedges, texts, autotexts = plt.pie(group_dist, labels=group_dist.index, colors=colors,
-            autopct=make_autopct(group_dist.values),
-            textprops={'weight': 'bold'},
-            wedgeprops={'edgecolor': 'black', 'linewidth': 1},  # Add black borders
-            startangle=90)
-    plt.title('Distribution of Diagnostic Groups')
-    plt.savefig('5-4-group_distribution_hanyang.png')
-    plt.close()
+    # Create group distribution plot
+    if len(group_dist) > 0:
+        plt.figure(figsize=(8, 8))
+        colors = [COLORS['occasional']['mint'], 
+                 COLORS['occasional']['coral'],
+                 COLORS['secondary']['gold']]
+        
+        # Ensure we don't have more categories than colors
+        if len(group_dist) > len(colors):
+            colors = colors * (len(group_dist) // len(colors) + 1)
+        
+        plt.pie(group_dist, labels=group_dist.index, colors=colors[:len(group_dist)],
+                autopct=make_autopct(group_dist.values),
+                textprops={'weight': 'bold', 'fontsize': 15},
+                wedgeprops={'edgecolor': 'black', 'linewidth': 1},
+                startangle=90)
+        plt.title('Distribution of Diagnostic Groups', fontsize=18)
+        plt.savefig('5-4-group_distribution.png')
+        plt.close()
     
-    # Continue with original diagnosis transition analysis
-    print("\nSubjects with diagnosis changes:")
-    for subject, dx_list in diagnosis_changes.items():
-        if len(set(dx_list)) > 1:
-            print(f"{subject}: {dx_list}")
-    
+    # Analyze diagnosis transitions
+    diagnosis_changes = df.groupby('Subject')['RS:DX_fill'].agg(list)
     changing_diagnosis = diagnosis_changes.apply(lambda x: len(set(x)) > 1)
     n_changed = changing_diagnosis.sum()
+    
+    print("\n6. Diagnosis Changes Analysis:")
+    print("\nFirst 10 subjects' diagnosis sequences:")
+    print(diagnosis_changes.head(10))
     
     print(f"\nSummary Statistics:")
     print(f"Number of subjects with changing diagnosis: {n_changed}")
     print(f"Percentage of subjects with changing diagnosis: {(n_changed/len(diagnosis_changes))*100:.2f}%")
-    
+
+    # Create transition matrix visualization
     if n_changed > 0:
         transitions = []
         for subject_diagnoses in diagnosis_changes:
@@ -309,12 +331,31 @@ def analyze_adni_data(file_path):
         
         if transitions:
             transition_df = pd.DataFrame(transitions, columns=['From', 'To'])
+            diagnosis_order = ['CN', 'MCI', 'Dementia']
             transition_matrix = pd.crosstab(transition_df['From'], transition_df['To'])
+            transition_matrix = transition_matrix.reindex(index=diagnosis_order, columns=diagnosis_order)
+            transition_matrix = transition_matrix.fillna(0).astype(int)
             
-            plt.figure(figsize=(10, 8))
-            sns.heatmap(transition_matrix, annot=True, fmt='d', cmap='YlOrRd')
-            plt.title('Diagnosis Transition Matrix')
-            plt.savefig('5-5-diagnosis_transitions.png')
+            fig, ax = plt.subplots(figsize=(10, 8))
+            cmap = sns.light_palette(COLORS['primary']['blue'], as_cmap=True)
+            
+            sns.heatmap(transition_matrix, 
+                       annot=True, 
+                       fmt='d', 
+                       cmap=cmap,
+                       cbar_kws={'label': 'Number of Transitions'}, 
+                       square=True)
+            
+            plt.title('Diagnosis Transition Matrix', pad=20, fontsize=18)
+            plt.xlabel('To', labelpad=10, fontsize=15)
+            plt.ylabel('From', labelpad=10, fontsize=15)
+            
+            apply_hanyang_style(ax)
+            plt.xticks(rotation=0)
+            plt.yticks(rotation=0)
+            plt.tight_layout()
+            
+            plt.savefig('5-5-diagnosis_transitions.png', dpi=300, bbox_inches='tight')
             plt.close()
             
             print("\nTransition Matrix:")
@@ -323,6 +364,5 @@ def analyze_adni_data(file_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Analyze ADNI visit data from a CSV file.')
     parser.add_argument('input_file', help='Path to the input CSV file')
-    
     args = parser.parse_args()
     analyze_adni_data(args.input_file)

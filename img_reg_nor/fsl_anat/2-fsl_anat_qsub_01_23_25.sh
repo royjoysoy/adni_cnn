@@ -20,21 +20,21 @@
 
 
 #$ -S /bin/bash
-#$ -N fsl_anat_normalization
+#$ -N fsl_anat_normalization_1mm_direct
 #$ -V
-#$ -t 1-2409
+#$ -t 1-3
 #$ -cwd
-#$ -o ./fsl_anat_logs/
-#$ -e ./fsl_anat_logs/
+#$ -o ./fsl_anat_logs_1mm_direct/
+#$ -e ./fsl_anat_logs_1mm_direct/
 
 source /usr/local/fsl/6.0/etc/fslconf/fsl.sh
 export FSLDIR=/usr/local/fsl/6.0
 export PATH=${FSLDIR}/bin:${PATH}
 
 # Set file paths
-FILE_LIST="/ibic/scratch/royseo_workingdir/fsl_anat/scripts/fsl_anat_subj_list_2409_raw.log"
+FILE_LIST="/ibic/scratch/royseo_workingdir/fsl_anat/scripts/fsl_anat_subj_list_3_raw_test.log"
 INPUT_DIR="/ibic/scratch/royseo_workingdir/fsl_anat/raw"
-OUTPUT_DIR="/ibic/scratch/royseo_workingdir/fsl_anat/processed"
+OUTPUT_DIR="/ibic/scratch/royseo_workingdir/fsl_anat/processed_direct1mm"
 
 # Check if file list exists
 if [ ! -f "$FILE_LIST" ]; then
@@ -57,8 +57,16 @@ fi
 # Run fsl_anat for the specific file
 if [ -f "${INPUT_DIR}/${FILE_NAME}" ] && [ -r "${INPUT_DIR}/${FILE_NAME}" ]; then
     echo "$(date): Processing ${FILE_NAME}"
-    fsl_anat -i "${INPUT_DIR}/${FILE_NAME}" --nobias
+    fsl_anat -i "${INPUT_DIR}/${FILE_NAME}" -t MNI152_T1_1mm --nobias
     mv "${FILE_NAME%.*}.anat" "${OUTPUT_DIR}/"
+
+    # Check if the move was successful
+    if [ -d "${OUTPUT_DIR}/${FILE_NAME%.*}.anat" ]; then
+        echo "$(date): Successfully moved ${FILE_NAME%.*}.anat to ${OUTPUT_DIR}/"
+    else
+        echo "$(date): Error - Failed to move ${FILE_NAME%.*}.anat to ${OUTPUT_DIR}/" >&2
+        exit 1
+    fi
 else
     echo "$(date): Error - File ${INPUT_DIR}/${FILE_NAME} not found or not readable" >&2
     exit 1
